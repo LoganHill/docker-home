@@ -1,0 +1,5 @@
+monitoring/.env.exporter*
+traefik/.env
+monitoring/idrac.yml
+pihole/.env
+unifi/.env

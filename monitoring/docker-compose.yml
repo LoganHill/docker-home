@@ -1,0 +1,122 @@
+services:
+  grafana:
+    depends_on:
+      - prometheus
+    image: grafana/grafana-enterprise
+    container_name: grafana
+    restart: always
+    user: '472:472'
+    networks:
+      - proxy
+    environment:
+      - GF_SERVER_ROOT_URL=https://grafana.loganhill.nz/
+    volumes:
+      - "/srv/grafana/data:/var/lib/grafana"
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.loganhill.nz`)"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.tls=true"
+      - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+      - "traefik.docker.network=proxy"
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: always
+    user: root
+    networks:
+      - proxy
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.size=32GB"
+      - "--web.console.libraries=/etc/prometheus/console_libraries"
+      - "--web.console.templates=/etc/prometheus/consoles"
+      - "--web.enable-lifecycle"
+      - "--web.enable-admin-api"
+
+    volumes:
+      - "/srv/monitoring/prometheus:/prometheus"
+      - "./prometheus:/etc/prometheus"
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.loganhill.nz`)"
+      - "traefik.http.routers.prometheus.entrypoints=websecure"
+      - "traefik.http.routers.prometheus.tls=true"
+      - "traefik.http.routers.prometheus.tls.certresolver=letsencrypt"
+      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+      - "traefik.docker.network=proxy"
+
+  exporter_pihole:
+    image: ekofr/pihole-exporter:latest
+    container_name: exporter_pihole
+    restart: always
+    networks:
+      - proxy
+    env_file:
+      - .env.exporter_pihole
+    environment:
+      - "PIHOLE_HOSTNAME=pihole"
+      - "PIHOLE_PORT=443"
+      - "PORT=9617"
+      - "PIHOLE_PROTOCOL=https"
+      - "SKIP_TLS_VERIFICATION=true"
+    ports:
+      - "9617:9617"
+    volumes:
+      - "/etc/ssl/certs:/etc/ssl/certs:ro"
+
+  exporter_ros:
+    image: ghcr.io/akpw/mktxp:latest
+    container_name: exporter_ros
+    restart: always
+    networks:
+      - proxy
+    user: root
+    ports:
+      - "49090:49090"
+    volumes:
+      - "/srv/monitoring/exporter_ros/:/root/mktxp/"
+
+  exporter_svr:
+    image: prom/node-exporter:latest
+    container_name: exporter_svr
+    restart: always
+    networks:
+      - proxy
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    volumes:
+      - "/proc:/host/proc:ro"
+      - "/sys:/host/sys:ro"
+      - "/:/rootfs:ro"
+
+  exporter_zfs:
+    image: matusnovak/prometheus-zfs:latest
+    container_name: exporter_zfs
+    restart: always
+    privileged: true
+    networks:
+      - proxy
+
+  exporter_idrac:
+    image: mrlhansen/idrac_exporter
+    container_name: exporter_idrac
+    restart: always
+    networks:
+      - proxy
+    volumes:
+      - "./idrac.yml:/etc/prometheus/idrac.yml"
+
+networks:
+  proxy:
+    name: proxy
+    enable_ipv6: true
+    external: true
