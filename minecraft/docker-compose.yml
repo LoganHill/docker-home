@@ -1,0 +1,19 @@
+services:
+  minecraft:
+    image: itzg/minecraft-server
+    tty: true
+    stdin_open: true
+    ports:
+      - "25565:25565"
+    networks:
+      - proxy
+    environment:
+      EULA: "TRUE"
+    volumes:
+      - /srv/minecraft:/data
+
+networks:
+  proxy:
+    name: proxy
+    enable_ipv6: true
+    external: true

@@ -11,19 +11,19 @@ services:
       - proxy
     volumes:
       - /srv/jellyfin/config:/config
-      - /srv/jellyfin/tv:/srv/jellyfin/tv
-      - /srv/jellyfin/movies:/srv/jellyfin/movies
+      - /srv/data/media:/data/media
     ports:
       - 7359:7359/udp
       - 1900:1900/udp
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.jellyfin.rule=Host(`jellyfin.loganhill.nz`)"
-      - "traefik.http.routers.jellyfin.entrypoints=websecure"
-      - "traefik.http.routers.jellyfin.tls=true"
-      - "traefik.http.routers.jellyfin.tls.certresolver=letsencrypt"
-      - "traefik.http.services.jellyfin.loadbalancer.server.port=8096"
-      - "traefik.docker.network=proxy"
+      traefik.enable: true
+      traefik.http.routers.jellyfin.rule: Host(`jellyfin.loganhill.nz`)
+      traefik.http.routers.jellyfin.entrypoints: websecure
+      traefik.http.routers.jellyfin.tls: true
+      traefik.http.routers.jellyfin.tls.certresolver: letsencrypt
+      traefik.http.services.jellyfin.loadbalancer.server.port: 8096
+      traefik.docker.network: proxy
+      traefik.http.routers.jellyfin.middlewares: authelia@docker
     restart: always
 
   sonarr:
@@ -35,8 +35,7 @@ services:
       - TZ=Pacific/Auckland
     volumes:
       - /srv/sonarr/config:/config
-      - /srv/jellyfin/tv:/srv/jellyfin/tv
-      - /srv/sonarr/downloads:/srv/sonarr/downloads
+      - /srv/data:/data
     networks:
       - proxy
     restart: always
@@ -48,6 +47,7 @@ services:
       - "traefik.http.routers.sonarr.tls.certresolver=letsencrypt"
       - "traefik.http.services.sonarr.loadbalancer.server.port=8989"
       - "traefik.docker.network=proxy"
+      - "traefik.http.routers.sonarr.middlewares=authelia@docker"
   
   radarr:
     image: lscr.io/linuxserver/radarr:latest
@@ -58,8 +58,7 @@ services:
       - TZ=Pacific/Auckland
     volumes:
       - /srv/radarr/config:/config
-      - /srv/jellyfin/movies:/srv/jellyfin/movies
-      - /srv/radarr/downloads:/srv/radarr/downloads
+      - /srv/data:/data
     networks:
       - proxy
     restart: always
@@ -71,6 +70,30 @@ services:
       - "traefik.http.routers.radarr.tls.certresolver=letsencrypt"
       - "traefik.http.services.radarr.loadbalancer.server.port=7878"
       - "traefik.docker.network=proxy"
+      - "traefik.http.routers.radarr.middlewares=authelia@docker"
+
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: lidarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Pacific/Auckland
+    volumes:
+      - /srv/lidarr/config:/config
+      - /srv/data:/data
+    networks:
+      - proxy
+    restart: always
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.lidarr.rule=Host(`lidarr.loganhill.nz`)"
+      - "traefik.http.routers.lidarr.entrypoints=websecure"
+      - "traefik.http.routers.lidarr.tls=true"
+      - "traefik.http.routers.lidarr.tls.certresolver=letsencrypt"
+      - "traefik.http.services.lidarr.loadbalancer.server.port=8686"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.lidarr.middlewares=authelia@docker"
 
   prowlarr:
     image: lscr.io/linuxserver/prowlarr:latest
@@ -92,19 +115,18 @@ services:
       - "traefik.http.routers.prowlarr.tls.certresolver=letsencrypt"
       - "traefik.http.services.prowlarr.loadbalancer.server.port=9696"
       - "traefik.docker.network=proxy"
+      - "traefik.http.routers.prowlarr.middlewares=authelia@docker"
 
-  qbittorrent:
-    image: lscr.io/linuxserver/qbittorrent:latest
-    container_name: qbittorrent
+  deluge:
+    image: lscr.io/linuxserver/deluge:latest
+    container_name: deluge
     environment:
       - PUID=1000
       - PGID=1000
       - TZ=Pacific/Auckland
-      - WEBUI_PORT=8080
-      - TORRENTING_PORT=6881
     volumes:
-      - /srv/qbittorrent:/config
-      - /srv/sonarr/downloads:/srv/sonarr/downloads
+      - /srv/deluge:/config
+      - /srv/data/torrents:/data/torrents
     ports:
       - 6881:6881
       - 6881:6881/udp
@@ -113,12 +135,45 @@ services:
     restart: always
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.qbittorrent.rule=Host(`qbt.loganhill.nz`)"
-      - "traefik.http.routers.qbittorrent.entrypoints=websecure"
-      - "traefik.http.routers.qbittorrent.tls=true"
-      - "traefik.http.routers.qbittorrent.tls.certresolver=letsencrypt"
-      - "traefik.http.services.qbittorrent.loadbalancer.server.port=8080"
+      - "traefik.http.routers.deluge.rule=Host(`deluge.loganhill.nz`)"
+      - "traefik.http.routers.deluge.entrypoints=websecure"
+      - "traefik.http.routers.deluge.tls=true"
+      - "traefik.http.routers.deluge.tls.certresolver=letsencrypt"
+      - "traefik.http.services.deluge.loadbalancer.server.port=8112"
       - "traefik.docker.network=proxy"
+      - "traefik.http.routers.deluge.middlewares=authelia@docker"
+
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    environment:
+      - LOG_LEVEL=info
+      - TZ=Pacific/Auckland
+    networks:
+      - proxy
+    restart: always
+
+  jellyseerr:
+    image: fallenbagel/jellyseerr:latest
+    container_name: jellyseerr
+    environment:
+      - LOG_LEVEL=info
+      - TZ=Pacific/Auckland
+      - PORT=5055
+    networks:
+      - proxy
+    volumes:
+      - /srv/jellyseerr:/app/config
+    restart: always
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jellyseerr.rule=Host(`jellyseerr.loganhill.nz`)"
+      - "traefik.http.routers.jellyseerr.entrypoints=websecure"
+      - "traefik.http.routers.jellyseerr.tls=true"
+      - "traefik.http.routers.jellyseerr.tls.certresolver=letsencrypt"
+      - "traefik.http.services.jellyseerr.loadbalancer.server.port=5055"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.jellyseerr.middlewares=authelia@docker"
 
 networks:
   proxy:

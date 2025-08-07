@@ -73,8 +73,7 @@ services:
       - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
 
       # Basic‑auth middleware
-      - "traefik.http.middlewares.dashboard-auth.basicauth.users=logan:$$apr1$$PtkTZ.9V$$2tY8ynPv6XJ/JDddLH4LF/"
-      - "traefik.http.routers.dashboard.middlewares=dashboard-auth@docker"
+      - "traefik.http.routers.dashboard.middlewares=authelia@docker"
 
 networks:
   proxy:

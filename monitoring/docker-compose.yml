@@ -12,6 +12,7 @@ services:
       - GF_SERVER_ROOT_URL=https://grafana.loganhill.nz/
     volumes:
       - "/srv/grafana/data:/var/lib/grafana"
+      - "./grafana/grafana.ini:/etc/grafana/grafana.ini"
 
     labels:
       - "traefik.enable=true"
@@ -21,6 +22,7 @@ services:
       - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
       - "traefik.docker.network=proxy"
+      - "traefik.http.routers.grafana.middlewares=authelia@docker"
 
   prometheus:
     image: prom/prometheus:latest
@@ -50,6 +52,7 @@ services:
       - "traefik.http.routers.prometheus.tls.certresolver=letsencrypt"
       - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
       - "traefik.docker.network=proxy"
+      - "traefik.http.routers.prometheus.middlewares=authelia@docker"
 
   exporter_pihole:
     image: ekofr/pihole-exporter:latest
