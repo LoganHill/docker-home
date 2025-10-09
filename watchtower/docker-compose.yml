@@ -1,0 +1,23 @@
+services:
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    environment:
+      - "WATCHTOWER_MONITOR_ONLY"
+      - "TZ=Pacific/Auckland"
+      - "WATCHTOWER_NOTIFICATIONS=email"
+      - "WATCHTOWER_NOTIFICATIONS_HOSTNAME=kiwisvr01"
+      - "WATCHTOWER_NOTIFICATION_EMAIL_FROM=watchtower@loganhill.nz"
+      - "WATCHTOWER_NOTIFICATION_EMAIL_TO=me@loganhill.nz"
+      - "WATCHTOWER_NOTIFICATION_EMAIL_SERVER=loganhill-nz.mail.protection.outlook.com"
+      - "WATCHTOWER_NOTIFICATION_EMAIL_SERVER_PORT=25"
+      - "WATCHTOWER_NOTIFICATION_EMAIL_DELAY=2"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: always
+
+networks:
+  proxy:
+    name: proxy
+    enable_ipv6: true
+    external: true
