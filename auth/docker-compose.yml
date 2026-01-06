@@ -7,26 +7,17 @@ services:
     depends_on:
       - lldap
       - postgres
+      - redis
     networks:
       - proxy
-    secrets: ["JWT_SECRET", "SESSION_SECRET", "STORAGE_PASSWORD", "STORAGE_ENCRYPTION_KEY", "LDAP_PASSWORD", "SMTP_PASSWORD"]
+    secrets: ["JWT_SECRET", "SESSION_SECRET", "STORAGE_PASSWORD", "STORAGE_ENCRYPTION_KEY", "LDAP_PASSWORD", "REDIS_PASSWORD"]
     environment:
       AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET_FILE: "/run/secrets/JWT_SECRET"
       AUTHELIA_SESSION_SECRET_FILE: "/run/secrets/SESSION_SECRET"
       AUTHELIA_STORAGE_POSTGRES_PASSWORD_FILE: "/run/secrets/STORAGE_PASSWORD"
       AUTHELIA_STORAGE_ENCRYPTION_KEY_FILE: "/run/secrets/STORAGE_ENCRYPTION_KEY"
       AUTHELIA_AUTHENTICATION_BACKEND_LDAP_PASSWORD_FILE: "/run/secrets/LDAP_PASSWORD"
-      #AUTHELIA_NOTIFIER_SMTP_PASSWORD_FILE: "/run/secrets/SMTP_PASSWORD"
-      #AUTHELIA_NOTIFIER_DISABLE_STARTUP_CHECK: "true"
-      #AUTHELIA_STORAGE_POSTGRES_ADDRESS: "tcp://postgres:5432"
-      #AUTHELIA_STORAGE_POSTGRES_DATABASE: "authelia"
-      #AUTHELIA_STORAGE_POSTGRES_SCHEMA: "public"
-      #AUTHELIA_STORAGE_POSTGRES_TIMEOUT: "5 seconds"
-      #AUTHELIA_REGULATION_MODES: "user"
-      #AUTHELIA_REGULATION_MAX_RETRIES: "3"
-      #AUTHELIA_REGULATION_FIND_TIME: "2 minutes"
-      #AUTHELIA_REGULATION_BAN_TIME: "60 minutes"
-      #AUTHELIA_ACCESS_CONTROL_DEFAULT_POLICY: "one_factor"
+      AUTHELIA_SESSION_REDIS_PASSWORD_FILE: "/run/secrets/REDIS_PASSWORD"
       TZ: "Pacific/Auckland"
     volumes:
       - "./config:/config"
@@ -43,7 +34,7 @@ services:
 
   postgres:
     container_name: postgres
-    image: postgres
+    image: postgres:17
     restart: always
     shm_size: 512mb
     env_file:
@@ -57,10 +48,16 @@ services:
     networks:
       - proxy
   
-  #redis:
-  #  container_name: redis
-  #  image: redis
-  #  restart: always
+  redis:
+    container_name: redis
+    image: redis
+    restart: always
+    user: 1000:1000
+    volumes:
+      - "/srv/redis/data:/data"
+      - "/srv/redis/config/:/usr/local/etc/redis/"
+    networks:
+      - proxy
 
   lldap:
     image: lldap/lldap:stable
@@ -114,3 +111,5 @@ secrets:
     file: '/srv/authelia/secrets/LDAP_PASSWORD'
   SMTP_PASSWORD:
     file: '/srv/authelia/secrets/SMTP_PASSWORD'
+  REDIS_PASSWORD:
+    file: '/srv/authelia/secrets/REDIS_PASSWORD'

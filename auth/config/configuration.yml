@@ -121,17 +121,19 @@ session:
   name: 'authelia_session'
   same_site: 'lax'
   inactivity: '5m'
-  expiration: '1h'
-  remember_me: '12 months'
+  expiration: '24h'
+  remember_me: '7d'
   cookies:
   - domain: 'loganhill.nz'
     authelia_url: 'https://auth.loganhill.nz'
-    default_redirection_url: 'https://jellyseerr.loganhill.nz'
-    name: 'authelia_session'
-    same_site: 'lax'
-    inactivity: '5m'
-    expiration: '1h'
-    remember_me: '12 months'
+  redis:
+    host: 'redis'
+    port: 6379
+    timeout: '5s'
+    max_retries: 3
+    database_index: 0 
+    maximum_active_connections: 8 
+    minimum_idle_connections: 0
 
 regulation:
   modes:
