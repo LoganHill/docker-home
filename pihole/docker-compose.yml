@@ -10,7 +10,7 @@ services:
     environment:
       TZ: 'Pacific/Auckland'
       FTLCONF_dns_listeningMode: 'all'
-      FTLCONF_dns_upstreams: '1.1.1.1;1.0.0.1;2606:4700:4700::1111;2606:4700:4700::1001'
+      FTLCONF_dns_upstreams: '103.250.90.8;202.179.141.8;2407:8b00:f101:10::10;2407:8b00:f102:10::10'
     env_file:
       - .env
     volumes:

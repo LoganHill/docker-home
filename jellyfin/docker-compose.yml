@@ -125,7 +125,7 @@ services:
       - "traefik.http.routers.prowlarr.middlewares=authelia@docker"
 
   deluge:
-    image: lscr.io/linuxserver/deluge:latest
+    image: lscr.io/linuxserver/deluge:2.2.0-r1-ls363
     container_name: deluge
     environment:
       - PUID=1000
@@ -160,9 +160,10 @@ services:
       - proxy
     restart: always
 
-  jellyseerr:
-    image: fallenbagel/jellyseerr:latest
-    container_name: jellyseerr
+  seerr:
+    image: ghcr.io/seerr-team/seerr:latest
+    container_name: seerr
+    init: true
     environment:
       - LOG_LEVEL=info
       - TZ=Pacific/Auckland
@@ -174,12 +175,12 @@ services:
     restart: always
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.jellyseerr.rule=Host(`jellyseerr.loganhill.nz`)"
-      - "traefik.http.routers.jellyseerr.entrypoints=websecure"
-      - "traefik.http.routers.jellyseerr.tls=true"
-      - "traefik.http.routers.jellyseerr.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.jellyseerr.service=jellyseerr"
-      - "traefik.http.services.jellyseerr.loadbalancer.server.port=5055"
+      - "traefik.http.routers.seerr.rule=Host(`seerr.loganhill.nz`)"
+      - "traefik.http.routers.seerr.entrypoints=websecure"
+      - "traefik.http.routers.seerr.tls=true"
+      - "traefik.http.routers.seerr.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.seerr.service=seerr"
+      - "traefik.http.services.seerr.loadbalancer.server.port=5055"
       - "traefik.docker.network=proxy"
 
 networks:

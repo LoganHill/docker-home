@@ -9,6 +9,9 @@ services:
       - proxy
     environment:
       EULA: "TRUE"
+      TYPE: FTBA
+      FTB_MODPACK_ID: 129
+      MEMORY: 16G
     volumes:
       - /srv/minecraft:/data
 
