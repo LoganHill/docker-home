@@ -115,6 +115,7 @@ services:
     restart: always
     networks:
       - proxy
+      - exporter_idrac_default
     volumes:
       - "./idrac.yml:/etc/prometheus/idrac.yml"
 
@@ -122,4 +123,7 @@ networks:
   proxy:
     name: proxy
     enable_ipv6: true
+    external: true
+  exporter_idrac_default:
+    name: exporter_idrac_default
     external: true

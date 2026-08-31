@@ -30,6 +30,11 @@ scrape_configs:
     static_configs:
       - targets: ['exporter_zfs:9901']
 
+  - job_name: minecraft
+    metrics_path: '/'
+    static_configs:
+      - targets: ['kiwisvr01:19565']
+
   - job_name: idrac
     static_configs:
       - targets: ['10.4.20.21']

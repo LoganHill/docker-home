@@ -9,7 +9,7 @@ services:
     networks:
      # Connect to the 'proxy' overlay network for inter-container communication across nodes
       - proxy
-      - immich-proxy
+      - immich
 
     env_file:
       - .env
@@ -67,19 +67,21 @@ services:
   # Traefik Dynamic configuration via Docker labels
     labels:
       # Enable self‑routing
-      - "traefik.enable=true"
-      - "traefik.docker.network=proxy"
+      traefik.enable: true
+      traefik.docker.network: proxy
 
       # Dashboard router
-      - "traefik.http.routers.dashboard.rule=Host(`traefik.loganhill.nz`)"
-      - "traefik.http.routers.dashboard.entrypoints=websecure"
-      - "traefik.http.routers.dashboard.service=api@internal"
-      - "traefik.http.routers.dashboard.tls=true"
-      - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
-
-      - "traefik.http.routers.dashboard.middlewares=authelia@docker"
+      traefik.http.routers.dashboard.rule: Host(`traefik.loganhill.nz`)
+      traefik.http.routers.dashboard.entrypoints: websecure
+      traefik.http.routers.dashboard.service: api@internal
+      traefik.http.routers.dashboard.tls: true
+      traefik.http.routers.dashboard.tls.certresolver: letsencrypt
+      traefik.http.routers.dashboard.middlewares: authelia@docker
 
 networks:
   proxy:
     name: proxy
+    external: true
+  immich:
+    name: immich
     external: true

@@ -1,0 +1,13 @@
+tunnel: 60288d24-b938-4700-b193-f85847abe841
+credentials-file: /etc/cloudflared/creds.json
+
+ingress:
+  - hostname: jellyfin.loganhill.nz
+    service: https://traefik:443
+    originRequest:
+      originServerName: jellyfin.loganhill.nz
+  - hostname: seerr.loganhill.nz
+    service: https://traefik:443
+    originRequest:
+      originServerName: seerr.loganhill.nz
+  - service: http_status:404

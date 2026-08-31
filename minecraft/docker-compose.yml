@@ -4,19 +4,36 @@ services:
     tty: true
     stdin_open: true
     ports:
-      - "25565:25565"
-    networks:
-      - proxy
+      - "25565:25565" # mc
+      - "19565:19565" # prom
+      - "8123:8123" # bluemap
     environment:
       EULA: "TRUE"
-      TYPE: FTBA
-      FTB_MODPACK_ID: 129
+      TYPE: AUTO_CURSEFORGE
+      CF_API_KEY: '$$2a$$10$$REDACTED'
+      CF_SLUG: create-ultimate-selection-2
+      CF_MODPACK_MANIFEST: /manifests/manifest.json
       MEMORY: 16G
     volumes:
       - /srv/minecraft:/data
+      - ./manifests:/manifests:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.minecraft.rule=Host(`mc.loganhill.nz`)"
+      - "traefik.http.routers.minecraft.entrypoints=websecure"
+      - "traefik.http.routers.minecraft.tls=true"
+      - "traefik.http.routers.minecraft.tls.certresolver=letsencrypt"
+      - "traefik.http.services.minecraft.loadbalancer.server.port=8123"
+      - "traefik.docker.network=proxy"
+    networks:
+      - proxy
+      - minecraft
 
 networks:
   proxy:
     name: proxy
     enable_ipv6: true
     external: true
+  minecraft:
+    name: minecraft
+    enable_ipv6: true

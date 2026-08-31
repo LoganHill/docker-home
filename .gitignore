@@ -1,4 +1,4 @@
-monitoring/.env.exporter*
+monitoring/.env.exporter_pihole
 traefik/.env
 monitoring/idrac.yml
 pihole/.env

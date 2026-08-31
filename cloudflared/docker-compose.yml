@@ -2,12 +2,13 @@ services:
   cloudflared:
     container_name: cloudflared
     image: cloudflare/cloudflared:latest
-    env_file: 
-        - .env
     networks:
       - proxy
     restart: always
-    command: tunnel run --token=$TUNNEL_TOKEN
+    volumes:
+      - ./config.yml:/etc/cloudflared/config.yml:ro
+      - /srv/cloudflared/60288d24-b938-4700-b193-f85847abe841.json:/etc/cloudflared/creds.json:ro
+    command: tunnel --config /etc/cloudflared/config.yml run
 
 networks:
   proxy:
