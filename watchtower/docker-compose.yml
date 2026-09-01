@@ -3,7 +3,13 @@ services:
     image: nickfedor/watchtower
     container_name: watchtower
     environment:
-      - "WATCHTOWER_MONITOR_ONLY"
+      # Was previously a bare "WATCHTOWER_MONITOR_ONLY" with no value and no
+      # .env file backing it — genuinely indeterminate whether this container
+      # was silently auto-restarting everything (incl. Postgres/Traefik/pihole)
+      # or doing nothing. Pinned explicitly to monitor-only (check + email,
+      # never auto-restart) as the safe default. Flip to "false" deliberately
+      # if blind auto-updates were actually the intent.
+      - "WATCHTOWER_MONITOR_ONLY=true"
       - "TZ=Pacific/Auckland"
       - "WATCHTOWER_NOTIFICATIONS=email"
       - "WATCHTOWER_NOTIFICATIONS_HOSTNAME=kiwisvr01"

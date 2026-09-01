@@ -9,3 +9,4 @@ authelia/.env
 authelia/config/users_database.yml
 auth/.env
 immich/.env
+authentik/.env

@@ -10,4 +10,8 @@ ingress:
     service: https://traefik:443
     originRequest:
       originServerName: seerr.loganhill.nz
+  - hostname: auth.loganhill.nz
+    service: https://traefik:443
+    originRequest:
+      originServerName: auth.loganhill.nz
   - service: http_status:404

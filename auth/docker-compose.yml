@@ -22,7 +22,12 @@ services:
     volumes:
       - "./config:/config"
     labels:
-      traefik.enable: 'true'
+      # Disabled now that authentik-server owns auth.loganhill.nz and all 11
+      # forward-auth consumers point at authentik@docker (see authentik/
+      # docker-compose.yml). Container stays running for now as a rollback
+      # safety net until the migration is confirmed stable — decommission
+      # comes later as its own step.
+      traefik.enable: 'false'
       traefik.http.routers.authelia.rule: 'Host(`auth.loganhill.nz`)'
       traefik.http.routers.authelia.entrypoints: 'websecure'
       traefik.http.routers.authelia.tls: 'true'

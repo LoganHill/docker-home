@@ -1,0 +1,136 @@
+services:
+  authentik-postgresql:
+    container_name: authentik-postgresql
+    image: postgres:17
+    restart: always
+    shm_size: 512mb
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: "authentik"
+      POSTGRES_DB: "authentik"
+      POSTGRES_PASSWORD: "${PG_PASS}"
+      PGDATA: "/var/lib/postgresql/data/pgdata"
+    volumes:
+      - "/srv/authentik-postgres:/var/lib/postgresql/data/pgdata"
+    networks:
+      - proxy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d authentik -U authentik"]
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 5s
+
+  authentik-redis:
+    container_name: authentik-redis
+    image: redis
+    restart: always
+    user: "1000:1000"
+    volumes:
+      - "/srv/authentik-redis:/data"
+    networks:
+      - proxy
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 3s
+
+  authentik-server:
+    container_name: authentik-server
+    image: ghcr.io/goauthentik/server:2026.8.0
+    restart: always
+    command: server
+    depends_on:
+      - authentik-postgresql
+      - authentik-redis
+    env_file:
+      - .env
+    environment:
+      AUTHENTIK_REDIS__HOST: "authentik-redis"
+      AUTHENTIK_POSTGRESQL__HOST: "authentik-postgresql"
+      AUTHENTIK_POSTGRESQL__USER: "authentik"
+      AUTHENTIK_POSTGRESQL__NAME: "authentik"
+      AUTHENTIK_POSTGRESQL__PASSWORD: "${PG_PASS}"
+      AUTHENTIK_EMAIL__HOST: "loganhill-nz.mail.protection.outlook.com"
+      AUTHENTIK_EMAIL__PORT: "25"
+      AUTHENTIK_EMAIL__USE_TLS: "true"
+      AUTHENTIK_EMAIL__FROM: "KiwiNest Auth <auth@loganhill.nz>"
+      TZ: "Pacific/Auckland"
+      AUTHENTIK_STORAGE__FILE__PATH: "/media"
+    volumes:
+      - "/srv/authentik/media:/media"
+      - "/srv/authentik/custom-templates:/templates"
+    networks:
+      - proxy
+    # Ports stay published as a direct-LAN admin fallback even now that Traefik
+    # routes here too.
+    ports:
+      - "9000:9000"
+      - "9443:9443"
+    labels:
+      traefik.enable: 'true'
+      traefik.docker.network: proxy
+      traefik.http.routers.authentik.rule: 'Host(`auth.loganhill.nz`)'
+      traefik.http.routers.authentik.entrypoints: websecure
+      traefik.http.routers.authentik.tls: 'true'
+      traefik.http.routers.authentik.tls.certresolver: letsencrypt
+      traefik.http.services.authentik.loadbalancer.server.port: '9000'
+      traefik.http.middlewares.authentik.forwardauth.address: 'http://authentik-server:9000/outpost.goauthentik.io/auth/traefik'
+      traefik.http.middlewares.authentik.forwardauth.trustForwardHeader: 'true'
+      traefik.http.middlewares.authentik.forwardauth.authResponseHeaders: 'X-authentik-username,X-authentik-groups,X-authentik-entitlements,X-authentik-email,X-authentik-name,X-authentik-uid,X-authentik-jwt,X-authentik-meta-jwks,X-authentik-meta-outpost,X-authentik-meta-provider,X-authentik-meta-app,X-authentik-meta-version'
+      # Outpost callback path needs routing on every protected host too —
+      # covers all 11 hosts (Household's 9 + Jellyfin + Seerr) in one router
+      # since they all resolve to the same authentik-server backend.
+      traefik.http.routers.authentik-outpost-callback.rule: '(Host(`auth.loganhill.nz`) || Host(`traefik.loganhill.nz`) || Host(`sonarr.loganhill.nz`) || Host(`radarr.loganhill.nz`) || Host(`lidarr.loganhill.nz`) || Host(`prowlarr.loganhill.nz`) || Host(`deluge.loganhill.nz`) || Host(`jellyfin.loganhill.nz`) || Host(`seerr.loganhill.nz`) || Host(`pihole.loganhill.nz`) || Host(`grafana.loganhill.nz`) || Host(`prometheus.loganhill.nz`)) && PathPrefix(`/outpost.goauthentik.io/`)'
+      traefik.http.routers.authentik-outpost-callback.entrypoints: websecure
+      traefik.http.routers.authentik-outpost-callback.tls: 'true'
+      traefik.http.routers.authentik-outpost-callback.tls.certresolver: letsencrypt
+      traefik.http.routers.authentik-outpost-callback.service: authentik
+      traefik.http.routers.authentik-outpost-callback.priority: '100'
+      com.centurylabs.watchtower.enable: 'false'
+
+  authentik-worker:
+    container_name: authentik-worker
+    image: ghcr.io/goauthentik/server:2026.8.0
+    restart: always
+    command: worker
+    depends_on:
+      - authentik-postgresql
+      - authentik-redis
+    env_file:
+      - .env
+    environment:
+      AUTHENTIK_REDIS__HOST: "authentik-redis"
+      AUTHENTIK_POSTGRESQL__HOST: "authentik-postgresql"
+      AUTHENTIK_POSTGRESQL__USER: "authentik"
+      AUTHENTIK_POSTGRESQL__NAME: "authentik"
+      AUTHENTIK_POSTGRESQL__PASSWORD: "${PG_PASS}"
+      AUTHENTIK_EMAIL__HOST: "loganhill-nz.mail.protection.outlook.com"
+      AUTHENTIK_EMAIL__PORT: "25"
+      AUTHENTIK_EMAIL__USE_TLS: "true"
+      AUTHENTIK_EMAIL__FROM: "KiwiNest Auth <auth@loganhill.nz>"
+      TZ: "Pacific/Auckland"
+      AUTHENTIK_STORAGE__FILE__PATH: "/media"
+    # The worker needs docker.sock to manage the embedded outpost (matches
+    # upstream's official compose) — this grants it root-equivalent access to
+    # the Docker host, same trust level Traefik/watchtower already have via
+    # their own socket mounts in this repo.
+    user: root
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "/srv/authentik/media:/media"
+      - "/srv/authentik/certs:/certs"
+      - "/srv/authentik/custom-templates:/templates"
+    networks:
+      - proxy
+    labels:
+      com.centurylabs.watchtower.enable: 'false'
+
+networks:
+  proxy:
+    name: proxy
+    enable_ipv6: true
+    external: true

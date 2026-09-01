@@ -22,7 +22,7 @@ services:
       - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
       - "traefik.docker.network=proxy"
-      - "traefik.http.routers.grafana.middlewares=authelia@docker"
+      - "traefik.http.routers.grafana.middlewares=authentik@docker"
 
   prometheus:
     image: prom/prometheus:latest
@@ -52,7 +52,7 @@ services:
       - "traefik.http.routers.prometheus.tls.certresolver=letsencrypt"
       - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
       - "traefik.docker.network=proxy"
-      - "traefik.http.routers.prometheus.middlewares=authelia@docker"
+      - "traefik.http.routers.prometheus.middlewares=authentik@docker"
 
   exporter_pihole:
     image: ekofr/pihole-exporter:latest
