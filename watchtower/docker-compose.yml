@@ -2,22 +2,10 @@ services:
   watchtower:
     image: nickfedor/watchtower
     container_name: watchtower
+    env_file:
+      - .env
     environment:
-      # Was previously a bare "WATCHTOWER_MONITOR_ONLY" with no value and no
-      # .env file backing it — genuinely indeterminate whether this container
-      # was silently auto-restarting everything (incl. Postgres/Traefik/pihole)
-      # or doing nothing. Pinned explicitly to monitor-only (check + email,
-      # never auto-restart) as the safe default. Flip to "false" deliberately
-      # if blind auto-updates were actually the intent.
-      - "WATCHTOWER_MONITOR_ONLY=true"
       - "TZ=Pacific/Auckland"
-      - "WATCHTOWER_NOTIFICATIONS=email"
-      - "WATCHTOWER_NOTIFICATIONS_HOSTNAME=kiwisvr01"
-      - "WATCHTOWER_NOTIFICATION_EMAIL_FROM=watchtower@loganhill.nz"
-      - "WATCHTOWER_NOTIFICATION_EMAIL_TO=me@loganhill.nz"
-      - "WATCHTOWER_NOTIFICATION_EMAIL_SERVER=loganhill-nz.mail.protection.outlook.com"
-      - "WATCHTOWER_NOTIFICATION_EMAIL_SERVER_PORT=25"
-      - "WATCHTOWER_NOTIFICATION_EMAIL_DELAY=2"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     restart: always

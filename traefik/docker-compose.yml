@@ -57,7 +57,7 @@ services:
       - "--certificatesresolvers.letsencrypt.acme.dnsChallenge.propagation.delayBeforeChecks=60"
       - "--certificatesResolvers.letsencrypt.acme.dnsChallenge.provider=cloudflare"
       - "--certificatesResolvers.letsencrypt.acme.dnsChallenge=true"
-      - "--certificatesResolvers.letsencrypt.acme.email=me@loganhill.nz"
+      - "--certificatesResolvers.letsencrypt.acme.email=${ACME_EMAIL}"
       - "--certificatesResolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
 
       # Timeout increase for Immich

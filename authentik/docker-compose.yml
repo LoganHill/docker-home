@@ -54,10 +54,6 @@ services:
       AUTHENTIK_POSTGRESQL__USER: "authentik"
       AUTHENTIK_POSTGRESQL__NAME: "authentik"
       AUTHENTIK_POSTGRESQL__PASSWORD: "${PG_PASS}"
-      AUTHENTIK_EMAIL__HOST: "loganhill-nz.mail.protection.outlook.com"
-      AUTHENTIK_EMAIL__PORT: "25"
-      AUTHENTIK_EMAIL__USE_TLS: "true"
-      AUTHENTIK_EMAIL__FROM: "KiwiNest Auth <auth@loganhill.nz>"
       TZ: "Pacific/Auckland"
       AUTHENTIK_STORAGE__FILE__PATH: "/media"
     volumes:
@@ -108,10 +104,6 @@ services:
       AUTHENTIK_POSTGRESQL__USER: "authentik"
       AUTHENTIK_POSTGRESQL__NAME: "authentik"
       AUTHENTIK_POSTGRESQL__PASSWORD: "${PG_PASS}"
-      AUTHENTIK_EMAIL__HOST: "loganhill-nz.mail.protection.outlook.com"
-      AUTHENTIK_EMAIL__PORT: "25"
-      AUTHENTIK_EMAIL__USE_TLS: "true"
-      AUTHENTIK_EMAIL__FROM: "KiwiNest Auth <auth@loganhill.nz>"
       TZ: "Pacific/Auckland"
       AUTHENTIK_STORAGE__FILE__PATH: "/media"
     # The worker needs docker.sock to manage the embedded outpost (matches

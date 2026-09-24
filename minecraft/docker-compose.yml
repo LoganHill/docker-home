@@ -7,10 +7,11 @@ services:
       - "25565:25565" # mc
       - "19565:19565" # prom
       - "8123:8123" # bluemap
+    env_file:
+      - .env
     environment:
       EULA: "TRUE"
       TYPE: AUTO_CURSEFORGE
-      CF_API_KEY: '$$2a$$10$$REDACTED'
       CF_SLUG: create-ultimate-selection-2
       CF_MODPACK_MANIFEST: /manifests/manifest.json
       MEMORY: 16G
