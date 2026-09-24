@@ -1,6 +1,6 @@
 services:
   jellyfin:
-    image: lscr.io/linuxserver/jellyfin:latest
+    image: linuxserver/jellyfin:latest
     container_name: jellyfin
     environment:
       - PUID=1000
