@@ -4,10 +4,6 @@ monitoring/idrac.yml
 pihole/.env
 unifi/.env
 cloudflared/.env
-authelia/config/configuration.yml
-authelia/.env
-authelia/config/users_database.yml
-auth/.env
 immich/.env
 authentik/.env
 watchtower/.env
