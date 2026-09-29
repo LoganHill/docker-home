@@ -10,10 +10,30 @@ Jellyfin and Immich can use the GPU (transcoding, and Immich's machine learning)
 
 ### Storage
 
-Root-on-ZFS across 4× 4TB disks:
-- `rootpool` — raidz2, with 2× 800GB SSDs as L2ARC cache. Holds `/`, `/var`, `/home`, and
-  `/srv`.
-- `bootpool` — a small raidz2 on the same disks for `/boot`.
+Root-on-ZFS (OpenZFS 2.3) across 4× 4TB SAS HDDs and 2× 800GB SAS SSDs:
+
+```
+rootpool   raidz2 · 4× 4TB HDD           /, /var, /home, /srv
+├─ logs    SSD 2 · part1 · 16G           SLOG
+└─ cache   SSD 1 (whole) + SSD 2 · part3  L2ARC, ~1.4T total
+bootpool   raidz2 · same 4 HDDs          /boot
+swap       SSD 2 · part2 · 16G           raw partition, not ZFS
+```
+
+- **SLOG:** sync writes (Postgres, Mongo, overlay2 copy-ups) hit the SSD instead of the
+  raidz2 ZIL on spinning disks. It's a single, unmirrored device, so it's only a risk if it
+  dies *and* the host crashes within the same few seconds.
+- **Swap** is deliberately a plain partition. It used to be a zvol, and swapping to a zvol can
+  deadlock under memory pressure (which was occurring).
+- **`sync=disabled` on `rootpool/var/lib/docker`.** When overlay2 copies a file up from an image
+  layer, it links a temp file into place. ZFS can't log that link in the ZIL, so it forces a full
+  pool sync (a txg sync) instead, and the SLOG can't help. Every copied-up file cost ~0.5s on the
+  raidz2 HDDs: UniFi OS Server's first boot took >10 min and saturated host I/O, and 100 files
+  took 55s. With sync disabled, the same 100 files take 17ms. The risk is losing the last ~5s of
+  writes under `/var/lib/docker` on a crash, which only holds rebuildable data (image layers,
+  container layers, caches). Real data lives in `/srv`, which keeps `sync=standard` and the SLOG.
+- **ARC** is capped at 32 GiB (`/etc/modprobe.d/zfs.conf`, baked into the initramfs) so it
+  leaves headroom for containers. It defaults to nearly all RAM.
 
 All persistent container data (bind mounts, databases, media) lives under `/srv`
 (`rootpool/srv`), bind-mounted into the containers.
@@ -163,7 +183,7 @@ Grafana goes one step further and trusts `X-authentik-username` for its own logi
 | `jellyfin/` | Jellyfin + Sonarr, Radarr, Lidarr, Prowlarr, Deluge, FlareSolverr, Seerr | `jellyfin.loganhill.nz`, `seerr.loganhill.nz` |
 | `immich/` | Immich photo management | `immich.loganhill.nz` |
 | `monitoring/` | Grafana, Prometheus, and exporters (pihole, Mikrotik, node, ZFS, iDRAC) | `grafana.loganhill.nz` |
-| `unifi/` | UniFi Network Application + Mongo | `unifi.loganhill.nz` |
+| `unifi-os/` | UniFi OS Server (Network app) | `unifi.loganhill.nz` |
 | `minecraft/` | Minecraft server (CurseForge modpack) + BlueMap | `mc.loganhill.nz` |
 | `watchtower/` | Watches for image updates, monitor-only, emails on findings | — |
 | `ntfy/` | Reserved for a future ntfy deployment; no compose file yet | — |
@@ -191,7 +211,7 @@ flowchart LR
         end
         s_immich["immich"]
         s_mon["monitoring"]
-        s_unifi["unifi"]
+        s_unifi["unifi-os"]
         s_mc["minecraft"]
     end
 
@@ -208,7 +228,7 @@ flowchart LR
         end
         d_immich["immich/<br/>upload · postgres"]
         d_mon["monitoring/ prometheus · exporter_ros<br/>grafana/data"]
-        d_unifi["unifi/data · mongo/"]
+        d_unifi["unifi-os/ persistent · data · srv<br/>var-lib-unifi · var-lib-mongodb"]
         d_mc["minecraft/"]
     end
 

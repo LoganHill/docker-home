@@ -1,0 +1,58 @@
+services:
+  unifi-os-server:
+    # Community repackaging of Ubiquiti's UniFi OS Server installer image:
+    # https://github.com/lemker/unifi-os-server. Pinned; upgrade deliberately.
+    image: ghcr.io/lemker/unifi-os-server:v1.7.0
+    container_name: unifi-os-server
+    # Runs systemd as PID 1, which needs the host cgroup + these tmpfs mounts.
+    cgroup: host
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    extra_hosts:
+      host.docker.internal: host-gateway
+    tmpfs:
+      - /run:exec
+      - /run/lock
+      - /tmp:exec
+      - /var/lib/journal
+      - /var/opt/unifi/tmp:size=64m
+    environment:
+      - TZ=Pacific/Auckland
+      # Inform host for devices; resolves to kiwisvr01 via pihole.
+      - UOS_SYSTEM_IP=unifi.loganhill.nz
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      - /srv/unifi-os/persistent:/persistent
+      - /srv/unifi-os/var-log:/var/log
+      - /srv/unifi-os/data:/data
+      - /srv/unifi-os/srv:/srv
+      - /srv/unifi-os/var-lib-unifi:/var/lib/unifi
+      - /srv/unifi-os/var-lib-mongodb:/var/lib/mongodb
+      - /srv/unifi-os/etc-rabbitmq-ssl:/etc/rabbitmq/ssl
+    ports:
+      - 11443:443 # admin fallback, bypassing Traefik
+      - 8080:8080 # device inform
+      - 8880:8880
+      - 6789:6789 # mobile speed test
+      - 3478:3478/udp # STUN
+      - 5514:5514/udp # remote syslog
+      - 10003:10003/udp # device discovery
+    restart: always
+    networks:
+      - proxy
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.unifi.rule=Host(`unifi.loganhill.nz`)"
+      - "traefik.http.routers.unifi.entrypoints=websecure"
+      - "traefik.http.routers.unifi.tls=true"
+      - "traefik.http.routers.unifi.tls.certresolver=letsencrypt"
+      - "traefik.http.services.unifi.loadbalancer.server.port=443"
+      - "traefik.http.services.unifi.loadbalancer.server.scheme=https"
+      - "traefik.docker.network=proxy"
+
+networks:
+  proxy:
+    name: proxy
+    external: true
