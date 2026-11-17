@@ -126,6 +126,71 @@ services:
               count: all
               capabilities: [gpu]
 
+  # Probes services end to end: public hostnames through Traefik (TLS/routing),
+  # app health endpoints on the Docker network, Pi-hole DNS, and LAN devices.
+  # On proxy too, to reach the apps' backends directly.
+  exporter_blackbox:
+    image: prom/blackbox-exporter:v0.28.0
+    container_name: exporter_blackbox
+    restart: always
+    command:
+      - '--config.file=/etc/blackbox/blackbox.yml'
+    volumes:
+      - "./blackbox:/etc/blackbox:ro"
+    networks:
+      - monitoring
+      - proxy
+
+  # --- logs: Alloy -> Loki, viewed in Grafana --------------------------------
+  loki:
+    image: grafana/loki:3.6.0
+    container_name: loki
+    restart: always
+    # Runs as logan so /srv/monitoring/loki can stay owned by the usual user.
+    user: "1000:1000"
+    command:
+      - '-config.file=/etc/loki/loki.yml'
+    volumes:
+      - "./loki/loki.yml:/etc/loki/loki.yml:ro"
+      - "/srv/monitoring/loki:/loki"
+    networks:
+      - monitoring
+
+  alloy:
+    image: grafana/alloy:v1.12.0
+    container_name: alloy
+    restart: always
+    depends_on:
+      - loki
+      - alloy-socket-proxy
+    command:
+      - run
+      - /etc/alloy/config.alloy
+      - --storage.path=/var/lib/alloy/data
+    volumes:
+      - "./alloy/config.alloy:/etc/alloy/config.alloy:ro"
+      # read positions, so a restart doesn't re-ship or skip logs
+      - "/srv/monitoring/alloy:/var/lib/alloy/data"
+      - "/var/log/journal:/var/log/journal:ro"
+      - "/etc/machine-id:/etc/machine-id:ro"
+    networks:
+      - monitoring
+      - alloy-socket
+
+  # Same pattern as traefik-socket-proxy: Alloy only gets GET on container
+  # list/inspect/logs, networks (discovery labels) and events, never the raw socket.
+  alloy-socket-proxy:
+    image: tecnativa/docker-socket-proxy:v0.4.1
+    container_name: alloy-socket-proxy
+    restart: always
+    environment:
+      - CONTAINERS=1
+      - NETWORKS=1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - alloy-socket
+
   exporter_smart:
     image: prometheuscommunity/smartctl-exporter:v0.14.0
     container_name: exporter_smart
@@ -183,6 +248,10 @@ networks:
   # exporter_pihole (Pi-hole is on proxy) are also on proxy.
   monitoring:
     name: monitoring
+  # Alloy <-> its socket proxy only; no outside access.
+  alloy-socket:
+    name: alloy-socket
+    internal: true
   proxy:
     name: proxy
     enable_ipv6: true

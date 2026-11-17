@@ -12,6 +12,7 @@
 
 # Rebuildable caches and derived data
 /srv/.zfs/snapshot/restic/monitoring/prometheus
+/srv/.zfs/snapshot/restic/monitoring/loki
 /srv/.zfs/snapshot/restic/clamav
 /srv/.zfs/snapshot/restic/jellyfin/config/cache
 /srv/.zfs/snapshot/restic/jellyfin/config/log
