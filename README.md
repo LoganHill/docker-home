@@ -193,7 +193,7 @@ whitelist, any container on `proxy` could send it straight to `grafana:3000`.
 |---|---|---|
 | `traefik/` | Reverse proxy, TLS termination | `:80`/`:443`, dashboard at `traefik.loganhill.nz` |
 | `cloudflared/` | Cloudflare Tunnel client | — |
-| `authentik/` | Authentik server/worker + its own Postgres/Redis | `auth.loganhill.nz` |
+| `authentik/` | Authentik server/worker + its own Postgres (private `authentik` network; only the server is on `proxy`) | `auth.loganhill.nz` |
 | `pihole/` | DNS + adblock | `pihole.loganhill.nz` |
 | `jellyfin/` | Jellyfin + Sonarr, Radarr, Lidarr, Prowlarr, qBittorrent, FlareSolverr, Seerr | `jellyfin.loganhill.nz`, `seerr.loganhill.nz` |
 | `questarr/` | Questarr (game library manager, downloads via qBittorrent) + ClamAV for pre-import scans, LAN only | `questarr.loganhill.nz` |
@@ -236,7 +236,7 @@ flowchart LR
         direction TB
         d_traefik["traefik/<br/>certs · dynamic · letsencrypt"]
         d_cfd["cloudflared/<br/>&lt;tunnel-id&gt;.json"]
-        d_ak["authentik/ media · certs · custom-templates<br/>authentik-postgres/ · authentik-redis/"]
+        d_ak["authentik/ media · certs · custom-templates<br/>authentik-postgres/"]
         d_pihole["pihole/etc-pihole"]
         d_cfg["jellyfin/config · sonarr/config · radarr/config<br/>lidarr/config · qbittorrent/ · prowlarr/data · jellyseerr/"]
         subgraph d_data["data/"]
