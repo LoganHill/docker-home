@@ -102,6 +102,9 @@ scrape_configs:
           - 'https://pihole.loganhill.nz/'
           - 'https://traefik.loganhill.nz/'
           - 'https://unifi.loganhill.nz/'
+          # file-provider route (/srv/traefik/dynamic/config.toml); the iDRAC only accepts
+          # this Host because it's in its iDRAC.WebServer.ManualDNSEntry / host-header settings
+          - 'https://kiwisvr01-idrac.loganhill.nz/'
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target
