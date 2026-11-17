@@ -135,9 +135,10 @@ services:
     volumes:
       - /srv/deluge:/config
       - /srv/data/torrents:/data/torrents
-    ports:
-      - 6881:6881
-      - 6881:6881/udp
+    # Replaced by qBittorrent; kept for rollback until the migration has soaked. Profile-gated so
+    # a plain `up -d` never starts it alongside qBittorrent on the same files. Rollback: stop
+    # qbittorrent, then `docker compose --profile deluge-rollback up -d deluge`.
+    profiles: [deluge-rollback]
     networks:
       - proxy
     restart: always
@@ -151,6 +152,34 @@ services:
       traefik.docker.network: proxy
       traefik.http.routers.deluge.middlewares: authentik@docker
 
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Pacific/Auckland
+      - WEBUI_PORT=8080
+      - TORRENTING_PORT=6881
+    volumes:
+      - /srv/qbittorrent:/config
+      - /srv/data/torrents:/data/torrents
+    ports:
+      - 6881:6881
+      - 6881:6881/udp
+    networks:
+      - proxy
+    restart: always
+    labels:
+      traefik.enable: true
+      traefik.http.routers.qbittorrent.rule: Host(`qbittorrent.loganhill.nz`)
+      traefik.http.routers.qbittorrent.entrypoints: websecure
+      traefik.http.routers.qbittorrent.tls: true
+      traefik.http.routers.qbittorrent.tls.certresolver: letsencrypt
+      traefik.http.services.qbittorrent.loadbalancer.server.port: 8080
+      traefik.docker.network: proxy
+      traefik.http.routers.qbittorrent.middlewares: authentik@docker
+
   flaresolverr:
     image: ghcr.io/flaresolverr/flaresolverr:latest
     container_name: flaresolverr
@@ -162,7 +191,7 @@ services:
     restart: always
 
   seerr:
-    image: ghcr.io/seerr-team/seerr:v3.4
+    image: ghcr.io/seerr-team/seerr:v3.5
     container_name: seerr
     init: true
     environment:

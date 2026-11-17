@@ -1,7 +1,7 @@
 services:
   cloudflared:
     container_name: cloudflared
-    image: cloudflare/cloudflared:latest
+    image: cloudflare/cloudflared:2026.10.7
     networks:
       - proxy
     restart: always

@@ -56,10 +56,10 @@ Backs up Immich to Backblaze B2 and sends a notification via ntfy after every ru
 ### Auth
 
 **Authentik** (`authentik/`, `auth.loganhill.nz`) is the SSO/identity provider. Most internal
-apps are gated by Traefik's `authentik@docker` forward-auth middleware. Two exceptions, because
-neither app understands forward-auth headers or works with it for native clients:
+apps are gated by Traefik's `authentik@docker` forward-auth middleware. A few exceptions,
+because none of them understand forward-auth headers or work with it for native clients:
 - **Jellyfin** does its own OIDC via the `JellyfinSecurity` plugin instead of forward-auth.
-- **Seerr** has no SSO support at all and uses its native login.
+- **Seerr** and **Questarr** have no SSO support at all and use their native logins.
 
 Guest access to Jellyfin/Seerr is handled by Cloudflare Access, itself backed by Authentik OIDC.
 
@@ -117,14 +117,14 @@ flowchart TB
         ak["Authentik"]
 
         subgraph gated["Behind forward-auth"]
-            arr["Sonarr · Radarr · Lidarr<br/>Prowlarr · Deluge"]
+            arr["Sonarr · Radarr · Lidarr<br/>Prowlarr · qBittorrent"]
             mon["Grafana · Prometheus"]
             admin["Pi-hole admin · Traefik dashboard"]
         end
 
         subgraph own["Own auth / no SSO"]
             jf["Jellyfin<br/>(OIDC plugin → Authentik)"]
-            seerr["Seerr (native login)"]
+            seerr["Seerr · Questarr (native login)"]
             misc["Immich · UniFi · BlueMap"]
         end
     end
@@ -140,7 +140,7 @@ flowchart TB
     traefik --> idrac
 ```
 
-A few things skip Traefik and are published directly on the host: Minecraft (`25565`), Deluge
+A few things skip Traefik and are published directly on the host: Minecraft (`25565`), qBittorrent
 peers (`6881`), Jellyfin discovery (`7359/udp`, `1900/udp`), UniFi device ports, and Authentik's
 `9000`/`9443` as an admin fallback.
 
@@ -180,7 +180,8 @@ Grafana goes one step further and trusts `X-authentik-username` for its own logi
 | `cloudflared/` | Cloudflare Tunnel client | — |
 | `authentik/` | Authentik server/worker + its own Postgres/Redis | `auth.loganhill.nz` |
 | `pihole/` | DNS + adblock | `pihole.loganhill.nz` |
-| `jellyfin/` | Jellyfin + Sonarr, Radarr, Lidarr, Prowlarr, Deluge, FlareSolverr, Seerr | `jellyfin.loganhill.nz`, `seerr.loganhill.nz` |
+| `jellyfin/` | Jellyfin + Sonarr, Radarr, Lidarr, Prowlarr, qBittorrent, FlareSolverr, Seerr | `jellyfin.loganhill.nz`, `seerr.loganhill.nz` |
+| `questarr/` | Questarr (game library manager, downloads via qBittorrent) + ClamAV for pre-import scans, LAN only | `questarr.loganhill.nz` |
 | `immich/` | Immich photo management | `immich.loganhill.nz` |
 | `monitoring/` | Grafana, Prometheus, and exporters (pihole, Mikrotik, node, ZFS, iDRAC) | `grafana.loganhill.nz` |
 | `unifi-os/` | UniFi OS Server (Network app) | `unifi.loganhill.nz` |
@@ -206,9 +207,10 @@ flowchart LR
         subgraph s_media["jellyfin/"]
             s_jf["jellyfin"]
             s_arr["sonarr · radarr · lidarr"]
-            s_deluge["deluge"]
+            s_qbit["qbittorrent"]
             s_misc["prowlarr · seerr"]
         end
+        s_questarr["questarr"]
         s_immich["immich"]
         s_mon["monitoring"]
         s_unifi["unifi-os"]
@@ -221,11 +223,12 @@ flowchart LR
         d_cfd["cloudflared/<br/>&lt;tunnel-id&gt;.json"]
         d_ak["authentik/ media · certs · custom-templates<br/>authentik-postgres/ · authentik-redis/"]
         d_pihole["pihole/etc-pihole"]
-        d_cfg["jellyfin/config · sonarr/config · radarr/config<br/>lidarr/config · deluge/ · prowlarr/data · jellyseerr/"]
+        d_cfg["jellyfin/config · sonarr/config · radarr/config<br/>lidarr/config · qbittorrent/ · prowlarr/data · jellyseerr/"]
         subgraph d_data["data/"]
             d_torrents["torrents/"]
             d_lib["media/"]
         end
+        d_questarr["questarr/ · clamav/"]
         d_immich["immich/<br/>upload · postgres"]
         d_mon["monitoring/ prometheus · exporter_ros<br/>grafana/data"]
         d_unifi["unifi-os/ persistent · data · srv<br/>var-lib-unifi · var-lib-mongodb"]
@@ -239,9 +242,11 @@ flowchart LR
     s_ak --> d_ak
     s_pihole --> d_pihole
     s_media --> d_cfg
-    s_deluge --> d_torrents
+    s_qbit --> d_torrents
     s_jf --> d_lib
     s_arr --> d_data
+    s_questarr --> d_questarr
+    s_questarr --> d_data
     s_immich --> d_immich
     s_mon --> d_mon
     s_unifi --> d_unifi
