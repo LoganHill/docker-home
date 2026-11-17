@@ -8,6 +8,7 @@ services:
     user: '472:472'
     networks:
       - proxy
+      - monitoring
     environment:
       - GF_SERVER_ROOT_URL=https://grafana.loganhill.nz/
     volumes:
@@ -31,6 +32,7 @@ services:
     user: root
     networks:
       - proxy
+      - monitoring
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
@@ -61,6 +63,7 @@ services:
     restart: always
     networks:
       - proxy
+      - monitoring
     env_file:
       - .env.exporter_pihole
     environment:
@@ -77,7 +80,7 @@ services:
     container_name: exporter_ros
     restart: always
     networks:
-      - proxy
+      - monitoring
     user: root
     volumes:
       - "/srv/monitoring/exporter_ros/:/root/mktxp/"
@@ -112,7 +115,7 @@ services:
     container_name: exporter_gpu
     restart: always
     networks:
-      - proxy
+      - monitoring
     environment:
       - NVIDIA_DRIVER_CAPABILITIES=utility
     deploy:
@@ -130,7 +133,7 @@ services:
     privileged: true
     user: root
     networks:
-      - proxy
+      - monitoring
     command:
       - '--smartctl.interval=120s'
       # the PERC also exposes each disk as bus_0_megaraid_N; keep only /dev/sdX
@@ -143,7 +146,7 @@ services:
     restart: always
     privileged: true
     networks:
-      - proxy
+      - monitoring
     devices:
       - /dev/kmsg
     command:
@@ -164,23 +167,23 @@ services:
     restart: always
     privileged: true
     networks:
-      - proxy
+      - monitoring
 
   exporter_idrac:
     image: mrlhansen/idrac_exporter
     container_name: exporter_idrac
     restart: always
     networks:
-      - proxy
-      - exporter_idrac_default
+      - monitoring
     volumes:
       - "./idrac.yml:/etc/prometheus/idrac.yml"
 
 networks:
+  # Exporters live here; only Prometheus, Grafana (Traefik routes to them) and
+  # exporter_pihole (Pi-hole is on proxy) are also on proxy.
+  monitoring:
+    name: monitoring
   proxy:
     name: proxy
     enable_ipv6: true
-    external: true
-  exporter_idrac_default:
-    name: exporter_idrac_default
     external: true
