@@ -62,6 +62,11 @@ Config lives in `backup/`; the restic script itself and its credentials stay in 
   `80`/`443` and issuing Let's Encrypt certs. Services opt in via `traefik.*` Docker labels.
 - Almost every stack joins the external `proxy` Docker network (created out-of-band, not by any
   compose file here — `docker network create proxy --ipv6`) so Traefik can route to them.
+  Containers Traefik never routes to stay off it: Authentik's Postgres and worker are on a private
+  `authentik` network, and the exporters on a private `monitoring` network.
+- Traefik reads container labels through `traefik-socket-proxy`, a GET-only Docker API proxy on
+  an internal network, instead of mounting `docker.sock` (a `:ro` mount still exposes the whole
+  API).
 - **cloudflared** (`cloudflared/`) runs a Cloudflare Tunnel for the handful of services exposed
   to the internet (currently `auth`, `jellyfin`, `seerr`), fronted by Cloudflare Access.
 - **pihole** (`pihole/`) is internal DNS/adblock for the LAN.
