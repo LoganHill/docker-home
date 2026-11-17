@@ -38,7 +38,6 @@ services:
       - "--web.console.libraries=/etc/prometheus/console_libraries"
       - "--web.console.templates=/etc/prometheus/consoles"
       - "--web.enable-lifecycle"
-      - "--web.enable-admin-api"
 
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -70,8 +69,6 @@ services:
       - "PORT=9617"
       - "PIHOLE_PROTOCOL=https"
       - "SKIP_TLS_VERIFICATION=true"
-    ports:
-      - "9617:9617"
     volumes:
       - "/etc/ssl/certs:/etc/ssl/certs:ro"
 
@@ -82,8 +79,6 @@ services:
     networks:
       - proxy
     user: root
-    ports:
-      - "49090:49090"
     volumes:
       - "/srv/monitoring/exporter_ros/:/root/mktxp/"
 
@@ -93,7 +88,7 @@ services:
     restart: always
     # host network so the netdev collector sees the real NICs; on a bridge
     # network it only sees its own container eth0. Prometheus reaches it via
-    # host.docker.internal:9100.
+    # host.docker.internal:9100 (docker0, 172.17.0.1).
     network_mode: host
     command:
       - '--path.procfs=/host/proc'
@@ -103,6 +98,8 @@ services:
       - '--collector.netdev.device-exclude=^(lo|veth.*|br-.*|docker0)$$'
       - '--collector.netclass.ignored-devices=^(lo|veth.*|br-.*|docker0)$$'
       - '--collector.textfile.directory=/textfile'
+      # docker0's address = host.docker.internal for Prometheus; not exposed on the LAN
+      - '--web.listen-address=172.17.0.1:9100'
     volumes:
       - "/proc:/host/proc:ro"
       - "/sys:/host/sys:ro"

@@ -183,13 +183,15 @@ sequenceDiagram
 ```
 
 Grafana goes one step further and trusts `X-authentik-username` for its own login
-(`auth.proxy` in `monitoring/grafana/grafana.ini`), so it's single sign-on end to end.
+(`auth.proxy` in `monitoring/grafana/grafana.ini`), so it's single sign-on end to end. It only
+accepts that header from Traefik's fixed `proxy` address (`172.23.255.250`); without the
+whitelist, any container on `proxy` could send it straight to `grafana:3000`.
 
 ### Stacks
 
 | Directory | What it runs | URL |
 |---|---|---|
-| `traefik/` | Reverse proxy, TLS termination | `:80`/`:443`, dashboard on `:8082` |
+| `traefik/` | Reverse proxy, TLS termination | `:80`/`:443`, dashboard at `traefik.loganhill.nz` |
 | `cloudflared/` | Cloudflare Tunnel client | — |
 | `authentik/` | Authentik server/worker + its own Postgres/Redis | `auth.loganhill.nz` |
 | `pihole/` | DNS + adblock | `pihole.loganhill.nz` |
