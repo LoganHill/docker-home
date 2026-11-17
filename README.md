@@ -40,8 +40,21 @@ All persistent container data (bind mounts, databases, media) lives under `/srv`
 
 ### Backups
 
-Restic, run by a systemd unit + timer (`restic-backup.service` / `.timer`, daily at 03:00).
-Backs up Immich to Backblaze B2 and sends a notification via ntfy after every run.
+Config lives in `backup/`; the restic script itself and its credentials stay in `/root`.
+
+- **Local snapshots:** sanoid snapshots `rootpool/srv` hourly (kept 24) and daily (kept 7), for
+  quick rollback after a bad update or an accidental delete. Retention is short on purpose:
+  `/srv` includes the media library, and snapshots keep deleted/upgraded media on disk until
+  they expire.
+- **Off-site:** restic, run by `restic-backup.service` / `.timer` (daily at 03:00), backs up
+  `/srv` to Backblaze B2 and sends an ntfy notification after every run. A drop-in snapshots
+  `rootpool/srv@restic` just before the run and restic reads from
+  `/srv/.zfs/snapshot/restic`, so every database is captured at the same point in time
+  without stopping anything. `backup/restic-excludes.txt` leaves out media, caches and other
+  rebuildable data; everything else in `/srv` is included by default. Restic keeps 7 daily,
+  4 weekly, 12 monthly and 3 yearly snapshots.
+- **Restoring:** paths in the repository start with `/srv/.zfs/snapshot/restic/`, e.g.
+  `restic restore latest:/srv/.zfs/snapshot/restic/immich --target /srv/immich-restore`.
 
 ### Networking
 
