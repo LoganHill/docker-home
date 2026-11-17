@@ -64,7 +64,7 @@ services:
       # Outpost callback path needs routing on every protected host too —
       # covers all 11 hosts (Household's 9 + Jellyfin + Seerr) in one router
       # since they all resolve to the same authentik-server backend.
-      traefik.http.routers.authentik-outpost-callback.rule: '(Host(`auth.loganhill.nz`) || Host(`traefik.loganhill.nz`) || Host(`sonarr.loganhill.nz`) || Host(`radarr.loganhill.nz`) || Host(`lidarr.loganhill.nz`) || Host(`prowlarr.loganhill.nz`) || Host(`deluge.loganhill.nz`) || Host(`jellyfin.loganhill.nz`) || Host(`seerr.loganhill.nz`) || Host(`pihole.loganhill.nz`) || Host(`grafana.loganhill.nz`) || Host(`prometheus.loganhill.nz`)) && PathPrefix(`/outpost.goauthentik.io/`)'
+      traefik.http.routers.authentik-outpost-callback.rule: '(Host(`auth.loganhill.nz`) || Host(`traefik.loganhill.nz`) || Host(`sonarr.loganhill.nz`) || Host(`radarr.loganhill.nz`) || Host(`lidarr.loganhill.nz`) || Host(`prowlarr.loganhill.nz`) || Host(`qbittorrent.loganhill.nz`) || Host(`jellyfin.loganhill.nz`) || Host(`seerr.loganhill.nz`) || Host(`pihole.loganhill.nz`) || Host(`grafana.loganhill.nz`) || Host(`prometheus.loganhill.nz`)) && PathPrefix(`/outpost.goauthentik.io/`)'
       traefik.http.routers.authentik-outpost-callback.entrypoints: websecure
       traefik.http.routers.authentik-outpost-callback.tls: 'true'
       traefik.http.routers.authentik-outpost-callback.tls.certresolver: letsencrypt

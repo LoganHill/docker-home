@@ -30,14 +30,6 @@
 # Pi-hole DNS query history (~1 GB, rewritten daily)
 pihole-FTL.db*
 
-# Leftovers from finished migrations, pending deletion
-/srv/.zfs/snapshot/restic/deluge
-/srv/.zfs/snapshot/restic/mongo
-/srv/.zfs/snapshot/restic/unifi
-/srv/.zfs/snapshot/restic/jellyseerr.bak
-/srv/.zfs/snapshot/restic/postgres
-/srv/.zfs/snapshot/restic/redis
-
 # Junk
 *.tmp
 *.swp
