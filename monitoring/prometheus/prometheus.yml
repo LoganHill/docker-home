@@ -24,7 +24,27 @@ scrape_configs:
 
   - job_name: svr
     static_configs:
-      - targets: ['exporter_svr:9100']
+      - targets: ['host.docker.internal:9100']
+        labels:
+          instance: kiwisvr01
+
+  - job_name: gpu
+    static_configs:
+      - targets: ['exporter_gpu:9835']
+        labels:
+          instance: kiwisvr01
+
+  - job_name: smart
+    static_configs:
+      - targets: ['exporter_smart:9633']
+        labels:
+          instance: kiwisvr01
+
+  - job_name: cadvisor
+    static_configs:
+      - targets: ['exporter_cadvisor:8080']
+        labels:
+          instance: kiwisvr01
 
   - job_name: svr_zfs
     static_configs:
@@ -35,7 +55,11 @@ scrape_configs:
     static_configs:
       - targets: ['kiwisvr01:19565']
 
+  # Redfish on the iDRAC is slow (seconds per endpoint), so scrape it rarely
+  # with a long timeout; the 15s default timed out most of the time.
   - job_name: idrac
+    scrape_interval: 60s
+    scrape_timeout: 55s
     static_configs:
       - targets: ['10.4.20.21']
     relabel_configs:

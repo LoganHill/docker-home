@@ -1,0 +1,7 @@
+[Unit]
+Description=ZFS scrub + backup state for node-exporter (textfile collector)
+
+[Service]
+Type=oneshot
+User=logan
+ExecStart=/home/logan/docker/monitoring/host-metrics/host-metrics.py /srv/monitoring/textfile restic-backup.service

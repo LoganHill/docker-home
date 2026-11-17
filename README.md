@@ -183,7 +183,7 @@ Grafana goes one step further and trusts `X-authentik-username` for its own logi
 | `jellyfin/` | Jellyfin + Sonarr, Radarr, Lidarr, Prowlarr, qBittorrent, FlareSolverr, Seerr | `jellyfin.loganhill.nz`, `seerr.loganhill.nz` |
 | `questarr/` | Questarr (game library manager, downloads via qBittorrent) + ClamAV for pre-import scans, LAN only | `questarr.loganhill.nz` |
 | `immich/` | Immich photo management | `immich.loganhill.nz` |
-| `monitoring/` | Grafana, Prometheus, and exporters (pihole, Mikrotik, node, ZFS, iDRAC) | `grafana.loganhill.nz` |
+| `monitoring/` | Grafana, Prometheus, and exporters (pihole, Mikrotik, node, ZFS, iDRAC, NVIDIA GPU, SMART, cAdvisor); host-side `gpu-procs` and `host-metrics` units feed node-exporter's textfile collector | `grafana.loganhill.nz` |
 | `unifi-os/` | UniFi OS Server (Network app) | `unifi.loganhill.nz` |
 | `minecraft/` | Minecraft server (CurseForge modpack) + BlueMap | `mc.loganhill.nz` |
 | `watchtower/` | Watches for image updates, monitor-only, emails on findings | — |
