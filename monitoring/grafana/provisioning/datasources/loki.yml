@@ -1,0 +1,11 @@
+# Loki data source, provisioned so it lives in the repo (fixed uid for dashboards).
+apiVersion: 1
+datasources:
+  - name: Loki
+    uid: loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    editable: false
+    jsonData:
+      maxLines: 1000

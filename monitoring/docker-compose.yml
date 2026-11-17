@@ -14,6 +14,7 @@ services:
     volumes:
       - "/srv/grafana/data:/var/lib/grafana"
       - "./grafana/grafana.ini:/etc/grafana/grafana.ini"
+      - "./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro"
 
     labels:
       - "traefik.enable=true"
@@ -167,6 +168,8 @@ services:
       - run
       - /etc/alloy/config.alloy
       - --storage.path=/var/lib/alloy/data
+      # default is 127.0.0.1, which Prometheus can't scrape
+      - --server.http.listen-addr=0.0.0.0:12345
     volumes:
       - "./alloy/config.alloy:/etc/alloy/config.alloy:ro"
       # read positions, so a restart doesn't re-ship or skip logs
