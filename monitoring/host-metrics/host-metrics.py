@@ -49,6 +49,31 @@ try:
 except (subprocess.CalledProcessError, KeyError, ValueError) as e:
     print(f"zpool: {e}", file=sys.stderr)
 
+# Pool capacity: node-exporter only sees per-dataset free space, and ZFS slows
+# down well before a pool is full.
+try:
+    for line in run("zpool", "list", "-Hp", "-o", "name,size,alloc").splitlines():
+        name, size, alloc = line.split("\t")
+        add("zfs_pool_size_bytes", "Pool size (zpool list).", f'pool="{name}"', size)
+        add("zfs_pool_allocated_bytes", "Pool space allocated (zpool list).", f'pool="{name}"', alloc)
+except (subprocess.CalledProcessError, ValueError) as e:
+    print(f"zpool list: {e}", file=sys.stderr)
+
+# Newest sanoid snapshot per dataset (autosnap_* only: the transient @restic
+# snapshot taken by the backup would otherwise look like a fresh one).
+try:
+    newest = {}
+    for line in run("zfs", "list", "-Hp", "-t", "snapshot", "-o", "name,creation").splitlines():
+        name, created = line.split("\t")
+        dataset, snap = name.split("@", 1)
+        if snap.startswith("autosnap_"):
+            newest[dataset] = max(newest.get(dataset, 0), int(created))
+    for dataset, created in newest.items():
+        add("zfs_snapshot_newest_timestamp_seconds", "Creation time of the newest sanoid snapshot.",
+            f'dataset="{dataset}"', created)
+except (subprocess.CalledProcessError, ValueError) as e:
+    print(f"zfs list: {e}", file=sys.stderr)
+
 # --- systemd units (backups) ----------------------------------------------
 for unit in units:
     lbl = f'unit="{unit}"'
