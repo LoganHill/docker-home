@@ -1,0 +1,12 @@
+# Lets Grafana's Alerting pages show and silence the Prometheus/Alertmanager alerts.
+apiVersion: 1
+datasources:
+  - name: Alertmanager
+    uid: alertmanager
+    type: alertmanager
+    access: proxy
+    url: http://alertmanager:9093
+    jsonData:
+      implementation: prometheus
+      handleGrafanaManagedAlerts: false
+    editable: false

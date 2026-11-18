@@ -41,6 +41,8 @@ services:
       - "--web.console.libraries=/etc/prometheus/console_libraries"
       - "--web.console.templates=/etc/prometheus/consoles"
       - "--web.enable-lifecycle"
+      # Links in alert notifications ("Source:") point here instead of prometheus:9090
+      - "--web.external-url=https://prometheus.loganhill.nz/"
 
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -57,6 +59,25 @@ services:
       - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
       - "traefik.docker.network=proxy"
       - "traefik.http.routers.prometheus.middlewares=authentik@docker"
+
+  # Routes alerts from Prometheus to ntfy (alertmanager/alertmanager.yml). No
+  # Traefik route: view and silence alerts in Grafana (Alerting > Alert rules /
+  # Silences, "Alertmanager" datasource).
+  alertmanager:
+    image: prom/alertmanager:v0.35.0@sha256:e638797febd034838eca8b98cdbd46f951e9bf7f178777aa8669167406a9946c
+    container_name: alertmanager
+    restart: always
+    user: "1000:1000"
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+    volumes:
+      - "./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro"
+      # ntfy topic URLs (ntfy-critical.url, ntfy-warning.url); not in git
+      - "/srv/monitoring/alertmanager/secrets:/etc/alertmanager/secrets:ro"
+      - "/srv/monitoring/alertmanager/data:/alertmanager"
+    networks:
+      - monitoring
 
   exporter_pihole:
     image: ekofr/pihole-exporter:v1.4.0@sha256:bd849cd5e0f7f89bf38943d7988c5facfd603d9813c4c089fcff8ed121f718bb

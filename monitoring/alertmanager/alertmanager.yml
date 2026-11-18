@@ -1,0 +1,64 @@
+# Alertmanager: routes Prometheus alerts (monitoring/prometheus/alerts/) to ntfy.
+#
+# The topic URLs aren't in git (the repo is public). They live in
+# /srv/monitoring/alertmanager/, one full URL per file, using ntfy's built-in
+# Alertmanager template:
+#   ntfy-critical.url  https://ntfy.sh/<topic>?template=alertmanager&priority=high
+#   ntfy-warning.url   https://ntfy.sh/<topic>?template=alertmanager
+
+route:
+  receiver: ntfy-warning
+  # One notification per alert type; several instances (e.g. three hostnames)
+  # are listed in the same message.
+  group_by: [alertname]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 24h
+  routes:
+    - matchers: ['severity="critical"']
+      receiver: ntfy-critical
+      repeat_interval: 4h
+    # Held overnight; anything still firing at 06:00 is sent then.
+    - matchers: ['severity="warning"']
+      receiver: ntfy-warning
+      mute_time_intervals: [overnight]
+
+receivers:
+  - name: ntfy-critical
+    webhook_configs:
+      - url_file: /etc/alertmanager/secrets/ntfy-critical.url
+        send_resolved: true
+  - name: ntfy-warning
+    webhook_configs:
+      - url_file: /etc/alertmanager/secrets/ntfy-warning.url
+        send_resolved: true
+
+time_intervals:
+  - name: overnight
+    time_intervals:
+      - times:
+          - {start_time: "22:00", end_time: "24:00"}
+          - {start_time: "00:00", end_time: "06:00"}
+        location: Pacific/Auckland
+
+inhibit_rules:
+  # Pi-hole down: every hostname fails to resolve, so only page for DNS.
+  - source_matchers: ['alertname="DnsDown"']
+    target_matchers: ['alertname="HostnameDown"']
+  # Authentik down: every forward-auth hostname fails with it.
+  - source_matchers: ['alertname="AppDown"', 'service="auth"']
+    target_matchers: ['alertname="HostnameDown"']
+  # An app that's down also fails through Traefik; the AppDown alert is enough.
+  - source_matchers: ['alertname="AppDown"']
+    target_matchers: ['alertname="HostnameDown"']
+    equal: [service]
+  # Router down: the LAN devices behind it look down too.
+  - source_matchers: ['alertname="RouterUnreachable"']
+    target_matchers: ['alertname="LanDeviceUnreachable"']
+  # Same problem at both thresholds: only the critical one.
+  - source_matchers: ['alertname="CertExpiryCritical"']
+    target_matchers: ['alertname="CertExpiringSoon"']
+    equal: [instance]
+  - source_matchers: ['alertname="ZpoolAlmostFull"']
+    target_matchers: ['alertname="ZpoolFillingUp"']
+    equal: [pool]

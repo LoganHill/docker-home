@@ -203,7 +203,7 @@ whitelist, any container on `proxy` could send it straight to `grafana:3000`.
 | `jellyfin/` | Jellyfin + Sonarr, Radarr, Lidarr, Prowlarr, qBittorrent, FlareSolverr, Seerr | `jellyfin.loganhill.nz`, `seerr.loganhill.nz` |
 | `questarr/` | Questarr (game library manager, downloads via qBittorrent) + ClamAV for pre-import scans, LAN only | `questarr.loganhill.nz` |
 | `immich/` | Immich photo management | `immich.loganhill.nz` |
-| `monitoring/` | Grafana, Prometheus, Loki + Alloy (container logs and the host journal), blackbox probes (hostnames via Traefik, app health endpoints, Pi-hole DNS, LAN devices), and exporters (pihole, Mikrotik, node, ZFS, iDRAC, NVIDIA GPU, SMART, cAdvisor); host-side `gpu-procs` and `host-metrics` units feed node-exporter's textfile collector | `grafana.loganhill.nz` |
+| `monitoring/` | Grafana, Prometheus + Alertmanager (alerts to ntfy, see [Alerts](#alerts)), Loki + Alloy (container logs and the host journal), blackbox probes (hostnames via Traefik, app health endpoints, Pi-hole DNS, LAN devices), and exporters (pihole, Mikrotik, node, ZFS, iDRAC, NVIDIA GPU, SMART, cAdvisor); host-side `gpu-procs` and `host-metrics` units feed node-exporter's textfile collector | `grafana.loganhill.nz` |
 | `unifi-os/` | UniFi OS Server (Network app) | `unifi.loganhill.nz` |
 | `minecraft/` | Minecraft server (CurseForge modpack) + BlueMap | `mc.loganhill.nz` |
 | `ntfy/` | Reserved for a future ntfy deployment; no compose file yet | — |
@@ -272,6 +272,39 @@ flowchart LR
     s_mc --> d_mc
     d_immich -. "restic, nightly" .-> b2
 ```
+
+### Alerts
+
+Rules are in [`monitoring/prometheus/alerts/homelab.yml`](monitoring/prometheus/alerts/homelab.yml)
+(with promtool unit tests alongside); Alertmanager
+([`monitoring/alertmanager/alertmanager.yml`](monitoring/alertmanager/alertmanager.yml)) sends
+them to a dedicated ntfy topic using ntfy's built-in Alertmanager template.
+
+| Severity | ntfy priority | When | Repeats |
+|---|---|---|---|
+| `critical` | high | any time | every 4h while firing |
+| `warning` | default | held 22:00–06:00 NZ, sent at 06:00 if still firing | every 24h |
+
+Both send a "Resolved" message when they clear. One notification per alert type; several
+instances (e.g. three hostnames) share a message.
+
+- **Covered:** backups (failed, or no success in 26h), sanoid snapshots, pool state, capacity
+  and data errors, scrubs, SMART, disk/GPU/sensor temperatures, iDRAC components (not the
+  rollup: PS1 is unplugged by design), memory, OOM kills, NTP, every app's health endpoint,
+  hostnames via Traefik, Pi-hole DNS, LAN devices, certificate expiry, scrape targets, and the
+  host-side metric scripts.
+- **Inhibitions:** a DNS or Authentik outage suppresses the per-hostname alerts it causes, and
+  so does an app's own `AppDown` for its hostname.
+- **Topic URLs** aren't in git: `/srv/monitoring/alertmanager/secrets/ntfy-{critical,warning}.url`,
+  one full URL each (`https://ntfy.sh/<topic>?template=alertmanager`, plus `&priority=high`
+  for critical).
+- **Silences and the live alert list:** Grafana > Alerting (Alertmanager datasource).
+  Alertmanager has no Traefik route.
+- **Not covered:** the server itself dying (nothing left to send the alert). A dead-man check
+  (Alertmanager pinging healthchecks.io) is on the to-do list.
+- Rule changes: `curl -X POST http://prometheus:9090/-/reload` from the monitoring network
+  (or restart Prometheus). Test with
+  `docker run --rm -v ./monitoring/prometheus:/p -w /p/alerts --entrypoint promtool prom/prometheus test rules homelab.test.yml`.
 
 ### Secrets
 

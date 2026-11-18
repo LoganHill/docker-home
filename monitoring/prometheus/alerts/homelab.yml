@@ -1,0 +1,262 @@
+# Alert rules for kiwisvr01. Routing, quiet hours and inhibitions live in
+# monitoring/alertmanager/alertmanager.yml.
+#
+# severity: critical -> ntfy high priority, any time, repeats every 4h
+#           warning  -> ntfy default priority, held 22:00-06:00, repeats every 24h
+# `summary` and `description` are what show up in the ntfy notification.
+#
+# Test with: docker run --rm -v ./monitoring/prometheus:/p -w /p/alerts --entrypoint promtool \
+#   prom/prometheus test rules homelab.test.yml
+
+groups:
+  # --- Backups and snapshots ------------------------------------------------
+  - name: data-protection
+    rules:
+      - alert: BackupFailed
+        expr: systemd_unit_last_run_success{unit="restic-backup.service"} == 0
+          unless on(unit) systemd_unit_running{unit="restic-backup.service"} == 1
+        for: 5m
+        labels: {severity: critical}
+        annotations:
+          summary: restic backup to B2 failed
+          description: The last run exited unsuccessfully. `journalctl -u restic-backup` has the details.
+
+      - alert: BackupStale
+        expr: time() - systemd_unit_last_success_timestamp_seconds{unit="restic-backup.service"} > 26 * 3600
+        for: 15m
+        labels: {severity: critical}
+        annotations:
+          summary: No successful backup in {{ $value | humanizeDuration }}
+          description: restic-backup runs daily at 03:00. Check `systemctl list-timers restic-backup.timer`.
+
+      - alert: SnapshotsStale
+        expr: time() - zfs_snapshot_newest_timestamp_seconds > 2 * 3600
+        for: 15m
+        labels: {severity: warning}
+        annotations:
+          summary: Newest sanoid snapshot of {{ $labels.dataset }} is {{ $value | humanizeDuration }} old
+          description: sanoid takes hourly snapshots. Check `systemctl status sanoid.timer` and `journalctl -u sanoid`.
+
+  # --- Pools and disks ------------------------------------------------------
+  - name: storage
+    rules:
+      - alert: ZpoolNotOnline
+        expr: node_zfs_zpool_state{state!="online"} == 1
+        for: 1m
+        labels: {severity: critical}
+        annotations:
+          summary: Pool {{ $labels.zpool }} is {{ $labels.state | toUpper }}
+          description: Run `zpool status -x` to see which device.
+
+      - alert: ZpoolDataErrors
+        expr: zfs_pool_data_errors > 0
+        labels: {severity: critical}
+        annotations:
+          summary: Pool {{ $labels.pool }} reports {{ $value }} permanent data error(s)
+          description: Run `zpool status -v {{ $labels.pool }}` to list the affected files.
+
+      - alert: ZfsScrubFoundErrors
+        expr: zfs_scrub_last_errors > 0
+        labels: {severity: critical}
+        annotations:
+          summary: Last scrub of {{ $labels.pool }} found {{ $value }} error(s)
+          description: Run `zpool status -v {{ $labels.pool }}`.
+
+      - alert: ZfsScrubOverdue
+        expr: time() - zfs_scrub_last_completed_timestamp_seconds > 40 * 86400
+        for: 1h
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.pool }} not scrubbed in {{ $value | humanizeDuration }}"
+          description: Debian's zfsutils cron scrubs on the second Sunday of each month.
+
+      - alert: ZpoolFillingUp
+        expr: zfs_pool_allocated_bytes / zfs_pool_size_bytes > 0.80
+        for: 30m
+        labels: {severity: warning}
+        annotations:
+          summary: Pool {{ $labels.pool }} is {{ $value | humanizePercentage }} full
+          description: ZFS write performance drops as a pool fills; keep it under ~80%.
+
+      - alert: ZpoolAlmostFull
+        expr: zfs_pool_allocated_bytes / zfs_pool_size_bytes > 0.90
+        for: 10m
+        labels: {severity: critical}
+        annotations:
+          summary: Pool {{ $labels.pool }} is {{ $value | humanizePercentage }} full
+          description: Free space now, before writes start failing.
+
+      # Non-ZFS filesystems (the EFI partition); ZFS datasets share pool space
+      # and are covered by the pool rules above.
+      - alert: FilesystemAlmostFull
+        expr: |
+          node_filesystem_avail_bytes{fstype!~"zfs|tmpfs|ramfs|overlay|squashfs|nsfs"}
+            / node_filesystem_size_bytes < 0.10
+        for: 15m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.mountpoint }} has {{ $value | humanizePercentage }} free"
+
+      - alert: SmartFailing
+        expr: smartctl_device_smart_status == 0
+        labels: {severity: critical}
+        annotations:
+          summary: SMART health check FAILED on {{ $labels.device }}
+          description: Run `sudo smartctl -a /dev/{{ $labels.device }}`. Plan a replacement; raidz2 keeps the data safe meanwhile.
+
+      - alert: DiskHot
+        expr: smartctl_device_temperature{temperature_type="current"} > 50
+        for: 15m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.device }} at {{ $value }}°C"
+          description: Check the fans and airflow (iDRAC).
+
+  # --- Host and hardware ----------------------------------------------------
+  - name: host
+    rules:
+      # The iDRAC's system rollup stays Critical because PS1 is unplugged by
+      # design, so it isn't used; components are checked individually.
+      - alert: IdracComponentUnhealthy
+        expr: |
+          {__name__=~"idrac_sensors_fan_health|idrac_power_supply_health|idrac_memory_module_health|idrac_storage_.*health"} > 0
+        for: 5m
+        labels: {severity: critical}
+        annotations:
+          summary: "iDRAC: {{ $labels.name }}{{ $labels.id }} is {{ $labels.status }}"
+          description: Metric {{ $labels.__name__ }}. Check the iDRAC (kiwisvr01-idrac.loganhill.nz).
+
+      - alert: MemoryLow
+        expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.05
+        for: 15m
+        labels: {severity: warning}
+        annotations:
+          summary: Only {{ $value | humanizePercentage }} of RAM available
+          description: The ZFS ARC is capped at 32G, so this is real memory pressure from containers.
+
+      - alert: ContainerOOMKilled
+        expr: increase(container_oom_events_total[10m]) > 0
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.name }} was OOM-killed"
+
+      - alert: GpuHot
+        expr: nvidia_smi_temperature_gpu > 85
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: GPU at {{ $value }}°C
+
+      - alert: HostSensorNearCritical
+        expr: node_hwmon_temp_celsius >= on(instance, chip, sensor) node_hwmon_temp_crit_celsius - 5
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.chip }} {{ $labels.sensor }} at {{ $value }}°C, within 5° of critical"
+
+      - alert: ClockNotSynced
+        expr: node_timex_sync_status == 0
+        for: 30m
+        labels: {severity: warning}
+        annotations:
+          summary: kiwisvr01's clock isn't NTP-synced
+          description: Clock drift breaks TLS and TOTP. Check `timedatectl`.
+
+  # --- Services (blackbox probes) -------------------------------------------
+  - name: services
+    rules:
+      - alert: AppDown
+        expr: probe_success{job="blackbox_backend"} == 0
+        for: 5m
+        labels: {severity: critical}
+        annotations:
+          summary: "{{ $labels.service }} health check failing"
+          description: "{{ $labels.instance }} (direct over Docker, no Traefik). Logs: Grafana > Status > Logs."
+
+      # Inhibited while the app itself, Authentik or DNS is down (alertmanager.yml).
+      - alert: HostnameDown
+        expr: probe_success{job="blackbox_edge"} == 0
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.instance }} not answering through Traefik"
+          description: The app's own health check is fine, so look at Traefik or the route.
+
+      - alert: DnsDown
+        expr: probe_success{job="blackbox_dns"} == 0
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: "Pi-hole failing {{ $labels.service }} lookups"
+          description: Pi-hole is the LAN's only DNS server, so name resolution is down for every device.
+
+      - alert: RouterUnreachable
+        expr: probe_success{job="blackbox_icmp", service="router"} == 0
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: Router (10.4.20.254) not answering ping
+          description: This likely arrives late; ntfy needs the internet connection the router provides.
+
+      - alert: LanDeviceUnreachable
+        expr: probe_success{job="blackbox_icmp", service!="router"} == 0
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.service }} ({{ $labels.instance }}) not answering ping"
+
+      - alert: CertExpiringSoon
+        expr: probe_ssl_earliest_cert_expiry{job="blackbox_edge"} - time() < 21 * 86400
+        for: 1h
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.instance }} cert expires in {{ $value | humanizeDuration }}"
+          description: Let's Encrypt renews at 30 days left, so renewals are failing. Check Traefik's logs.
+
+      - alert: CertExpiryCritical
+        expr: probe_ssl_earliest_cert_expiry{job="blackbox_edge"} - time() < 7 * 86400
+        for: 1h
+        labels: {severity: critical}
+        annotations:
+          summary: "{{ $labels.instance }} cert expires in {{ $value | humanizeDuration }}"
+          description: Renewals have been failing for over two weeks. Check Traefik's logs.
+
+  # --- The monitoring stack itself ------------------------------------------
+  - name: monitoring
+    rules:
+      - alert: ScrapeTargetDown
+        expr: up == 0
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $labels.job }} target {{ $labels.instance }} is down"
+          description: Alerts built on this target's metrics go quiet while it's down.
+
+      - alert: GpuProcsStale
+        expr: time() - node_textfile_mtime_seconds{file=~".*/gpu_procs.prom"} > 300
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: gpu-procs.service hasn't updated its metrics in {{ $value | humanizeDuration }}
+          description: Run `systemctl status gpu-procs`.
+
+      - alert: HostMetricsStale
+        expr: time() - node_textfile_mtime_seconds{file=~".*/host.prom"} > 900
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: host-metrics hasn't run in {{ $value | humanizeDuration }}
+          description: The backup, scrub, pool-capacity and snapshot alerts depend on it. Run `systemctl status host-metrics.timer`.
+
+      - alert: AlertRulesFailing
+        expr: increase(prometheus_rule_evaluation_failures_total[10m]) > 0
+        labels: {severity: warning}
+        annotations:
+          summary: Prometheus rule group {{ $labels.rule_group }} is failing to evaluate
+
+      - alert: AlertmanagerNotificationsFailing
+        expr: increase(alertmanager_notifications_failed_total[15m]) > 0
+        labels: {severity: warning}
+        annotations:
+          summary: Alertmanager can't deliver to {{ $labels.integration }}
+          description: Probably ntfy.sh unreachable or a bad topic URL in /srv/monitoring/alertmanager/*.url.

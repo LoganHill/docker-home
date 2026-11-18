@@ -1,0 +1,116 @@
+# promtool unit tests for homelab.yml (command at the top of that file).
+rule_files: [homelab.yml]
+evaluation_interval: 1m
+
+tests:
+  # A failed backup alerts; a run in progress (running=1) doesn't.
+  - interval: 1m
+    input_series:
+      - series: 'systemd_unit_last_run_success{unit="restic-backup.service", instance="kiwisvr01", job="svr"}'
+        values: '0x20'
+      - series: 'systemd_unit_running{unit="restic-backup.service", instance="kiwisvr01", job="svr"}'
+        values: '1x9 0x10'
+    alert_rule_test:
+      - {eval_time: 8m, alertname: BackupFailed, exp_alerts: []}
+      - eval_time: 20m
+        alertname: BackupFailed
+        exp_alerts:
+          - exp_labels: {severity: critical, unit: restic-backup.service, instance: kiwisvr01, job: svr}
+            exp_annotations:
+              summary: restic backup to B2 failed
+              description: The last run exited unsuccessfully. `journalctl -u restic-backup` has the details.
+
+  # Last success at t=0; stale once it's more than 26h old (+15m for:).
+  - interval: 1m
+    input_series:
+      - series: 'systemd_unit_last_success_timestamp_seconds{unit="restic-backup.service"}'
+        values: '0x1700'
+    alert_rule_test:
+      - {eval_time: 26h, alertname: BackupStale, exp_alerts: []}
+      - eval_time: 26h30m
+        alertname: BackupStale
+        exp_alerts:
+          - exp_labels: {severity: critical, unit: restic-backup.service}
+            exp_annotations:
+              summary: No successful backup in 1d 2h 30m 0s
+              description: restic-backup runs daily at 03:00. Check `systemctl list-timers restic-backup.timer`.
+
+  - interval: 1m
+    input_series:
+      - series: 'node_zfs_zpool_state{zpool="rootpool", state="online"}'
+        values: '1 0 0'
+      - series: 'node_zfs_zpool_state{zpool="rootpool", state="degraded"}'
+        values: '0 1 1'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: ZpoolNotOnline
+        exp_alerts:
+          - exp_labels: {severity: critical, zpool: rootpool, state: degraded}
+            exp_annotations:
+              summary: Pool rootpool is DEGRADED
+              description: Run `zpool status -x` to see which device.
+
+  # 85% full: the warning fires; the critical (>90%) doesn't.
+  - interval: 5m
+    input_series:
+      - series: 'zfs_pool_size_bytes{pool="rootpool"}'
+        values: '100x20'
+      - series: 'zfs_pool_allocated_bytes{pool="rootpool"}'
+        values: '85x20'
+    alert_rule_test:
+      - {eval_time: 1h, alertname: ZpoolAlmostFull, exp_alerts: []}
+      - eval_time: 1h
+        alertname: ZpoolFillingUp
+        exp_alerts:
+          - exp_labels: {severity: warning, pool: rootpool}
+            exp_annotations:
+              summary: Pool rootpool is 85% full
+              description: ZFS write performance drops as a pool fills; keep it under ~80%.
+
+  # iDRAC: a failed fan alerts, the system rollup (Critical by design) doesn't.
+  - interval: 1m
+    input_series:
+      - series: 'idrac_system_health{status="Critical"}'
+        values: '2x10'
+      - series: 'idrac_sensors_fan_health{id="0x17||Fan.Embedded.3", name="System Board Fan3 RPM", status="Critical"}'
+        values: '2x10'
+      - series: 'idrac_power_supply_health{id="1", status="OK"}'
+        values: '0x10'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: IdracComponentUnhealthy
+        exp_alerts:
+          - exp_labels: {severity: critical, id: "0x17||Fan.Embedded.3", name: System Board Fan3 RPM, status: Critical}
+            exp_annotations:
+              summary: "iDRAC: System Board Fan3 RPM0x17||Fan.Embedded.3 is Critical"
+              description: Metric idrac_sensors_fan_health. Check the iDRAC (kiwisvr01-idrac.loganhill.nz).
+
+  - interval: 1m
+    input_series:
+      - series: 'probe_success{job="blackbox_backend", service="sonarr", instance="http://sonarr:8989/ping"}'
+        values: '0x10'
+      - series: 'probe_success{job="blackbox_edge", service="radarr", instance="https://radarr.loganhill.nz/"}'
+        values: '1x10'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: AppDown
+        exp_alerts:
+          - exp_labels: {severity: critical, job: blackbox_backend, service: sonarr, instance: "http://sonarr:8989/ping"}
+            exp_annotations:
+              summary: sonarr health check failing
+              description: "http://sonarr:8989/ping (direct over Docker, no Traefik). Logs: Grafana > Status > Logs."
+      - {eval_time: 6m, alertname: HostnameDown, exp_alerts: []}
+
+  - interval: 1m
+    input_series:
+      - series: 'probe_ssl_earliest_cert_expiry{job="blackbox_edge", instance="https://auth.loganhill.nz/"}'
+        values: '1728000x200'   # 20 days after t=0
+    alert_rule_test:
+      - {eval_time: 2h, alertname: CertExpiryCritical, exp_alerts: []}
+      - eval_time: 2h
+        alertname: CertExpiringSoon
+        exp_alerts:
+          - exp_labels: {severity: warning, job: blackbox_edge, instance: "https://auth.loganhill.nz/"}
+            exp_annotations:
+              summary: https://auth.loganhill.nz/ cert expires in 19d 22h 0m 0s
+              description: Let's Encrypt renews at 30 days left, so renewals are failing. Check Traefik's logs.
