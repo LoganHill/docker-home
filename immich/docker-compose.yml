@@ -40,7 +40,7 @@ services:
   immich-machine-learning:
     container_name: immich_machine_learning
     # For hardware acceleration, add one of -[armnn, cuda, rocm, openvino, rknn] to the image tag.
-    # Example tag: ${IMMICH_VERSION:-release}-cuda
+    # The version is pinned here (not via IMMICH_VERSION in .env) so Renovate can bump it; keep server and ML on the same version.
     image: ghcr.io/immich-app/immich-machine-learning:v3.2.2-cuda@sha256:38001e84ce46206e9e019d8ee7f567bf55914f019dff8f6a70d02fd93bb14073
     deploy:
       resources:

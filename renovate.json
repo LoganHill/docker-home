@@ -7,6 +7,7 @@
     ":timezone(Pacific/Auckland)"
   ],
   "schedule": ["* 0-6 * * 6"],
+  "dependencyDashboard": {"enabled": false},
   "prHourlyLimit": 0,
   "prConcurrentLimit": 10,
   "labels": ["renovate"],
