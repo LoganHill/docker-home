@@ -1,5 +1,6 @@
-# promtool unit tests for homelab.yml (command at the top of that file).
-rule_files: [homelab.yml]
+# promtool unit tests for ../alerts/homelab.yml (command at the top of that file).
+# Kept outside alerts/ so Prometheus's alerts/*.yml rule_files glob doesn't load it.
+rule_files: [../alerts/homelab.yml]
 evaluation_interval: 1m
 
 tests:

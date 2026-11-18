@@ -276,7 +276,7 @@ flowchart LR
 ### Alerts
 
 Rules are in [`monitoring/prometheus/alerts/homelab.yml`](monitoring/prometheus/alerts/homelab.yml)
-(with promtool unit tests alongside); Alertmanager
+(promtool unit tests in `monitoring/prometheus/tests/`); Alertmanager
 ([`monitoring/alertmanager/alertmanager.yml`](monitoring/alertmanager/alertmanager.yml)) sends
 them to a dedicated ntfy topic using ntfy's built-in Alertmanager template.
 
@@ -304,7 +304,7 @@ instances (e.g. three hostnames) share a message.
   (Alertmanager pinging healthchecks.io) is on the to-do list.
 - Rule changes: `curl -X POST http://prometheus:9090/-/reload` from the monitoring network
   (or restart Prometheus). Test with
-  `docker run --rm -v ./monitoring/prometheus:/p -w /p/alerts --entrypoint promtool prom/prometheus test rules homelab.test.yml`.
+  `docker run --rm -v ./monitoring/prometheus:/p -w /p/tests --entrypoint promtool prom/prometheus test rules homelab.test.yml`.
 
 ### Secrets
 

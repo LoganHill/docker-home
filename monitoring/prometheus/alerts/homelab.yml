@@ -5,7 +5,7 @@
 #           warning  -> ntfy default priority, held 22:00-06:00, repeats every 24h
 # `summary` and `description` are what show up in the ntfy notification.
 #
-# Test with: docker run --rm -v ./monitoring/prometheus:/p -w /p/alerts --entrypoint promtool \
+# Test with: docker run --rm -v ./monitoring/prometheus:/p -w /p/tests --entrypoint promtool \
 #   prom/prometheus test rules homelab.test.yml
 
 groups:
