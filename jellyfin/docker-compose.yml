@@ -1,6 +1,6 @@
 services:
   jellyfin:
-    image: linuxserver/jellyfin:latest
+    image: lscr.io/linuxserver/jellyfin:12.4ubu2604-ls59@sha256:2f708001387aa9853e744a4a4d572d9970927c479c56d6c9e199f789c5173535
     container_name: jellyfin
     environment:
       - PUID=1000
@@ -35,7 +35,7 @@ services:
               capabilities: [gpu]
 
   sonarr:
-    image: lscr.io/linuxserver/sonarr:latest
+    image: lscr.io/linuxserver/sonarr:4.0.20.3014-ls5@sha256:c7d1df25e428da6c9ace05daea0d34e59522978a3843ea1944812f855af4086c
     container_name: sonarr
     environment:
       - PUID=1000
@@ -58,7 +58,7 @@ services:
       traefik.http.routers.sonarr.middlewares: authentik@docker
   
   radarr:
-    image: lscr.io/linuxserver/radarr:latest
+    image: lscr.io/linuxserver/radarr:6.4.4.10685-ls326@sha256:51a9ac2a9eb47afc833541e5fd6c11b86eb9f810694c22fa2429e3078e9194b2
     container_name: radarr
     environment:
       - PUID=1000
@@ -81,7 +81,7 @@ services:
       traefik.http.routers.radarr.middlewares: authentik@docker
 
   lidarr:
-    image: lscr.io/linuxserver/lidarr:latest
+    image: lscr.io/linuxserver/lidarr:3.1.6.5079-ls48@sha256:a91ef0642c15c9bd7c4260fee98fa99972c61601e37c8a96411d6a9cf0e9ad40
     container_name: lidarr
     environment:
       - PUID=1000
@@ -104,7 +104,7 @@ services:
       traefik.http.routers.lidarr.middlewares: authentik@docker
 
   prowlarr:
-    image: lscr.io/linuxserver/prowlarr:latest
+    image: lscr.io/linuxserver/prowlarr:2.7.0.5723-ls168@sha256:6660787a99b2e58203539583663c973b48979fc00ff2cb78dc0ea17429e1f6ef
     container_name: prowlarr
     environment:
       - PUID=1000
@@ -126,7 +126,7 @@ services:
       traefik.http.routers.prowlarr.middlewares: authentik@docker
 
   qbittorrent:
-    image: lscr.io/linuxserver/qbittorrent:latest
+    image: lscr.io/linuxserver/qbittorrent:5.3.0_v2.1.2-ls487@sha256:3d4c4545d51a690a0df15a2ff99038823a88a9822df8e794526447b9afbd7384
     container_name: qbittorrent
     environment:
       - PUID=1000
@@ -154,7 +154,7 @@ services:
       traefik.http.routers.qbittorrent.middlewares: authentik@docker
 
   flaresolverr:
-    image: ghcr.io/flaresolverr/flaresolverr:latest
+    image: ghcr.io/flaresolverr/flaresolverr:v3.5.2@sha256:c80ae007ce2ccdcd217a12426e4f039ef763ff90738c808d38810c3e59323767
     container_name: flaresolverr
     environment:
       - LOG_LEVEL=info
@@ -164,7 +164,7 @@ services:
     restart: always
 
   seerr:
-    image: ghcr.io/seerr-team/seerr:v3.5
+    image: ghcr.io/seerr-team/seerr:v3.5.2@sha256:aadee014b40e28cf9aa4928bc9d1183a6eb08f8c44d543cddc9efdcb16549be2
     container_name: seerr
     init: true
     environment:

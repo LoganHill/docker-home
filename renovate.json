@@ -1,0 +1,92 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Image updates for the compose stacks. Every image is pinned to version@digest; Renovate opens PRs, nothing deploys on merge. See README > Updates.",
+  "extends": [
+    "config:recommended",
+    "docker:pinDigests",
+    ":timezone(Pacific/Auckland)"
+  ],
+  "schedule": ["* 0-6 * * 6"],
+  "prHourlyLimit": 0,
+  "prConcurrentLimit": 10,
+  "labels": ["renovate"],
+  "prBodyNotes": [
+    "**Deploy after merging:** on kiwisvr01, `git pull` in `~/docker`, then `docker compose up -d` in each changed stack directory (see the file list above)."
+  ],
+  "packageRules": [
+    {
+      "description": "LinuxServer *arr tags: 4.0.20.3014-ls5 (app version + LinuxServer build number)",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": [
+        "lscr.io/linuxserver/sonarr",
+        "lscr.io/linuxserver/radarr",
+        "lscr.io/linuxserver/lidarr",
+        "lscr.io/linuxserver/prowlarr"
+      ],
+      "versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)\\.(?<build>\\d+)-ls(?<revision>\\d+)$"
+    },
+    {
+      "description": "LinuxServer Jellyfin tags: 12.4ubu2604-ls59 (the ubuNNNN base stays fixed)",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["lscr.io/linuxserver/jellyfin"],
+      "versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)(?:\\.(?<patch>\\d+))?(?<compatibility>ubu\\d+)-ls(?<revision>\\d+)$"
+    },
+    {
+      "description": "LinuxServer qBittorrent tags: 5.3.0_v2.1.2-ls487 (qBittorrent _ libtorrent - build)",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["lscr.io/linuxserver/qbittorrent"],
+      "versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)_v\\d+\\.\\d+\\.\\d+-ls(?<revision>\\d+)$"
+    },
+    {
+      "description": "ClamAV: stay on the slim _base variant",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["clamav/clamav"],
+      "versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)_base$"
+    },
+    {
+      "description": "Grafana: plain releases plus -security-NN patch releases; skips the ubuntu/slim/boringcrypto variants",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["grafana/grafana-enterprise"],
+      "versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)(?:-security-(?<build>\\d+))?$"
+    },
+    {
+      "description": "Authentik's Postgres: a major version needs a dump/restore, so do it by hand",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["postgres"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    },
+    {
+      "description": "Immich's Postgres image is bumped by Immich's own release notes, not independently",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["ghcr.io/immich-app/postgres"],
+      "enabled": false
+    },
+    {
+      "description": "Immich server and ML must run the same version",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["ghcr.io/immich-app/immich-server", "ghcr.io/immich-app/immich-machine-learning"],
+      "groupName": "immich"
+    },
+    {
+      "description": "One PR per week for the monitoring stack's non-major bumps",
+      "matchFileNames": ["monitoring/docker-compose.yml"],
+      "matchUpdateTypes": ["minor", "patch", "digest"],
+      "groupName": "monitoring stack"
+    },
+    {
+      "description": "One PR per week for the media stack's non-major bumps",
+      "matchFileNames": ["jellyfin/docker-compose.yml"],
+      "matchUpdateTypes": ["minor", "patch", "digest"],
+      "groupName": "media stack"
+    },
+    {
+      "description": "Restarting these stacks interrupts every hostname / login",
+      "matchFileNames": ["traefik/docker-compose.yml", "authentik/docker-compose.yml", "cloudflared/docker-compose.yml"],
+      "addLabels": ["disruptive"],
+      "prBodyNotes": [
+        "⚠️ Deploying this restarts the edge (Traefik / Authentik / tunnel): every hostname or login blips for a few seconds. Pick a quiet moment."
+      ]
+    }
+  ]
+}

@@ -2,7 +2,7 @@ services:
   unifi-os-server:
     # Community repackaging of Ubiquiti's UniFi OS Server installer image:
     # https://github.com/lemker/unifi-os-server. Pinned; upgrade deliberately.
-    image: ghcr.io/lemker/unifi-os-server:v1.7.0
+    image: ghcr.io/lemker/unifi-os-server:v1.7.0@sha256:ffa7bee4d6ed98350abe29247087ee330232c367b11e45a71b769719d29679f5
     container_name: unifi-os-server
     # Runs systemd as PID 1, which needs the host cgroup + these tmpfs mounts.
     cgroup: host

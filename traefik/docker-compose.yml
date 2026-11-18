@@ -4,7 +4,7 @@ services:
   # socket file), so Traefik talks to this instead: GET-only, and only the
   # container/events/version/ping endpoints.
   socket-proxy:
-    image: tecnativa/docker-socket-proxy:v0.4.1
+    image: tecnativa/docker-socket-proxy:v0.4.1@sha256:3400c429c5f9e1b21d62130fb93b16e2e772d4fb7695bd52fc2b743800b9fe9e
     container_name: traefik-socket-proxy
     restart: always
     environment:
@@ -17,7 +17,7 @@ services:
       - traefik-socket
 
   traefik:
-    image: traefik:v3.4
+    image: traefik:v3.4.5@sha256:06ddf61ee653caf4f4211a604e657f084f4727f762c16f826c97aafbefcb279e
     container_name: traefik
     restart: always
     security_opt:

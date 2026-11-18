@@ -1,7 +1,7 @@
 services:
   authentik-postgresql:
     container_name: authentik-postgresql
-    image: postgres:17
+    image: postgres:17.11@sha256:f4c66b820c6f974249089d3d16d86a3698eae11e8746eb6644b2271031e91232
     restart: always
     shm_size: 512mb
     env_file:
@@ -25,7 +25,7 @@ services:
 
   authentik-server:
     container_name: authentik-server
-    image: ghcr.io/goauthentik/server:2026.8.3
+    image: ghcr.io/goauthentik/server:2026.8.3@sha256:ab9b4e8cc4ab3f8d1198d2db6aeea66bafea1963b3f2843589e0d163f97d9849
     restart: always
     command: server
     depends_on:
@@ -70,11 +70,10 @@ services:
       traefik.http.routers.authentik-outpost-callback.tls.certresolver: letsencrypt
       traefik.http.routers.authentik-outpost-callback.service: authentik
       traefik.http.routers.authentik-outpost-callback.priority: '100'
-      com.centurylabs.watchtower.enable: 'false'
 
   authentik-worker:
     container_name: authentik-worker
-    image: ghcr.io/goauthentik/server:2026.8.3
+    image: ghcr.io/goauthentik/server:2026.8.3@sha256:ab9b4e8cc4ab3f8d1198d2db6aeea66bafea1963b3f2843589e0d163f97d9849
     restart: always
     command: worker
     depends_on:
@@ -98,8 +97,6 @@ services:
     # Only needs Postgres (plus outbound for email), not Traefik.
     networks:
       - authentik
-    labels:
-      com.centurylabs.watchtower.enable: 'false'
 
 networks:
   # Redis is gone: Authentik hasn't used it since 2025.10 (it had 0 keys and no
