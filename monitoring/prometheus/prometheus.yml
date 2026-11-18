@@ -69,3 +69,119 @@ scrape_configs:
         target_label: instance
       - target_label: __address__
         replacement: exporter_idrac:9348
+
+  - job_name: loki
+    static_configs:
+      - targets: ['loki:3100']
+
+  - job_name: alloy
+    static_configs:
+      - targets: ['alloy:12345']
+
+  # --- blackbox probes (monitoring/blackbox/blackbox.yml) ---------------------
+  # Each target is passed to exporter_blackbox as ?target=; `service` is a short
+  # name for dashboards.
+  - job_name: blackbox_edge
+    metrics_path: /probe
+    params:
+      module: [edge_https]
+    static_configs:
+      - targets:
+          - 'https://auth.loganhill.nz/'
+          - 'https://jellyfin.loganhill.nz/'
+          - 'https://seerr.loganhill.nz/'
+          - 'https://sonarr.loganhill.nz/'
+          - 'https://radarr.loganhill.nz/'
+          - 'https://lidarr.loganhill.nz/'
+          - 'https://prowlarr.loganhill.nz/'
+          - 'https://qbittorrent.loganhill.nz/'
+          - 'https://questarr.loganhill.nz/'
+          - 'https://immich.loganhill.nz/'
+          - 'https://grafana.loganhill.nz/'
+          - 'https://prometheus.loganhill.nz/'
+          - 'https://pihole.loganhill.nz/'
+          - 'https://traefik.loganhill.nz/'
+          - 'https://unifi.loganhill.nz/'
+          # file-provider route (/srv/traefik/dynamic/config.toml); the iDRAC only accepts
+          # this Host because it's in its iDRAC.WebServer.ManualDNSEntry / host-header settings
+          - 'https://kiwisvr01-idrac.loganhill.nz/'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__address__]
+        target_label: instance
+      - source_labels: [__address__]
+        regex: 'https://([^.]+)\..*'
+        target_label: service
+      - target_label: __address__
+        replacement: exporter_blackbox:9115
+
+  - job_name: blackbox_backend
+    metrics_path: /probe
+    params:
+      module: [backend_http]
+    static_configs:
+      - targets:
+          - 'http://authentik-server:9000/-/health/live/'
+          - 'http://grafana:3000/api/health'
+          - 'http://prometheus:9090/-/healthy'
+          - 'http://immich_server:2283/api/server/ping'
+          - 'http://jellyfin:8096/health'
+          - 'http://seerr:5055/api/v1/status'
+          - 'http://sonarr:8989/ping'
+          - 'http://radarr:7878/ping'
+          - 'http://lidarr:8686/ping'
+          - 'http://prowlarr:9696/ping'
+          - 'http://qbittorrent:8080/'
+          - 'http://questarr:5000/api/health'
+          - 'http://pihole:80/admin/'
+          - 'https://unifi-os-server:443/'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__address__]
+        target_label: instance
+      - source_labels: [__address__]
+        regex: 'https?://([^:/]+).*'
+        target_label: service
+      - target_label: __address__
+        replacement: exporter_blackbox:9115
+
+  - job_name: blackbox_dns
+    metrics_path: /probe
+    static_configs:
+      - targets: ['10.4.20.20:53']
+        labels: {module: dns_local, service: pihole-local}
+      - targets: ['10.4.20.20:53']
+        labels: {module: dns_upstream, service: pihole-upstream}
+    relabel_configs:
+      - source_labels: [module]
+        target_label: __param_module
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__address__]
+        target_label: instance
+      - target_label: __address__
+        replacement: exporter_blackbox:9115
+
+  - job_name: blackbox_icmp
+    metrics_path: /probe
+    params:
+      module: [icmp]
+    static_configs:
+      - targets: ['10.4.20.254']
+        labels: {service: router}
+      - targets: ['10.4.20.21']
+        labels: {service: idrac}
+      # UniFi switch/AP have no DNS names; IPs from the UniFi controller.
+      - targets: ['10.4.20.85']
+        labels: {service: switch}
+      - targets: ['10.4.20.51']
+        labels: {service: ap}
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__address__]
+        target_label: instance
+      - target_label: __address__
+        replacement: exporter_blackbox:9115

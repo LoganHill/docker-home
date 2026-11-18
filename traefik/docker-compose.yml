@@ -1,4 +1,21 @@
 services:
+  # Read-only Docker API for Traefik's docker provider. Mounting the socket :ro
+  # into Traefik still exposes the whole API (it only stops writes to the
+  # socket file), so Traefik talks to this instead: GET-only, and only the
+  # container/events/version/ping endpoints.
+  socket-proxy:
+    image: tecnativa/docker-socket-proxy:v0.4.1
+    container_name: traefik-socket-proxy
+    restart: always
+    environment:
+      - CONTAINERS=1
+      # EVENTS, PING and VERSION are allowed by default; everything else,
+      # including any POST, is denied.
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - traefik-socket
+
   traefik:
     image: traefik:v3.4
     container_name: traefik
@@ -7,9 +24,15 @@ services:
       - no-new-privileges:true
 
     networks:
-     # Connect to the 'proxy' overlay network for inter-container communication across nodes
-      - proxy
-      - immich
+      proxy:
+        # Fixed so Grafana can trust its auth-proxy header from Traefik only
+        # (auth.proxy whitelist in monitoring/grafana/grafana.ini).
+        ipv4_address: 172.23.255.250
+      immich:
+      traefik-socket:
+
+    depends_on:
+      - socket-proxy
 
     env_file:
       - .env
@@ -17,10 +40,8 @@ services:
     ports:
       - "80:80"
       - "443:443"
-      - "8082:8080"
 
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
       - /srv/traefik/certs:/certs:ro
       - /srv/traefik/dynamic:/dynamic:ro
       - /srv/traefik/letsencrypt:/letsencrypt
@@ -39,6 +60,7 @@ services:
 
       # Providers 
       - "--providers.docker=true"
+      - "--providers.docker.endpoint=tcp://traefik-socket-proxy:2375"
       - "--providers.docker.exposedbydefault=false"
       - "--providers.docker.network=proxy"
       - "--providers.file.watch=true"
@@ -79,6 +101,10 @@ services:
       traefik.http.routers.dashboard.middlewares: authentik@docker
 
 networks:
+  # Traefik <-> socket proxy only; no outside access.
+  traefik-socket:
+    name: traefik-socket
+    internal: true
   proxy:
     name: proxy
     external: true

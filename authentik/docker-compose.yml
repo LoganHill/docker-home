@@ -13,30 +13,15 @@ services:
       PGDATA: "/var/lib/postgresql/data/pgdata"
     volumes:
       - "/srv/authentik-postgres:/var/lib/postgresql/data/pgdata"
+    # Private to this stack: nothing on proxy needs the database.
     networks:
-      - proxy
+      - authentik
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -d authentik -U authentik"]
       start_period: 20s
       interval: 30s
       retries: 5
       timeout: 5s
-
-  authentik-redis:
-    container_name: authentik-redis
-    image: redis
-    restart: always
-    user: "1000:1000"
-    volumes:
-      - "/srv/authentik-redis:/data"
-    networks:
-      - proxy
-    healthcheck:
-      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
-      start_period: 20s
-      interval: 30s
-      retries: 5
-      timeout: 3s
 
   authentik-server:
     container_name: authentik-server
@@ -45,11 +30,9 @@ services:
     command: server
     depends_on:
       - authentik-postgresql
-      - authentik-redis
     env_file:
       - .env
     environment:
-      AUTHENTIK_REDIS__HOST: "authentik-redis"
       AUTHENTIK_POSTGRESQL__HOST: "authentik-postgresql"
       AUTHENTIK_POSTGRESQL__USER: "authentik"
       AUTHENTIK_POSTGRESQL__NAME: "authentik"
@@ -61,6 +44,7 @@ services:
       - "/srv/authentik/custom-templates:/templates"
     networks:
       - proxy
+      - authentik
     # Ports stay published as a direct-LAN admin fallback even now that Traefik
     # routes here too.
     ports:
@@ -80,7 +64,7 @@ services:
       # Outpost callback path needs routing on every protected host too —
       # covers all 11 hosts (Household's 9 + Jellyfin + Seerr) in one router
       # since they all resolve to the same authentik-server backend.
-      traefik.http.routers.authentik-outpost-callback.rule: '(Host(`auth.loganhill.nz`) || Host(`traefik.loganhill.nz`) || Host(`sonarr.loganhill.nz`) || Host(`radarr.loganhill.nz`) || Host(`lidarr.loganhill.nz`) || Host(`prowlarr.loganhill.nz`) || Host(`deluge.loganhill.nz`) || Host(`jellyfin.loganhill.nz`) || Host(`seerr.loganhill.nz`) || Host(`pihole.loganhill.nz`) || Host(`grafana.loganhill.nz`) || Host(`prometheus.loganhill.nz`)) && PathPrefix(`/outpost.goauthentik.io/`)'
+      traefik.http.routers.authentik-outpost-callback.rule: '(Host(`auth.loganhill.nz`) || Host(`traefik.loganhill.nz`) || Host(`sonarr.loganhill.nz`) || Host(`radarr.loganhill.nz`) || Host(`lidarr.loganhill.nz`) || Host(`prowlarr.loganhill.nz`) || Host(`qbittorrent.loganhill.nz`) || Host(`jellyfin.loganhill.nz`) || Host(`seerr.loganhill.nz`) || Host(`pihole.loganhill.nz`) || Host(`grafana.loganhill.nz`) || Host(`prometheus.loganhill.nz`)) && PathPrefix(`/outpost.goauthentik.io/`)'
       traefik.http.routers.authentik-outpost-callback.entrypoints: websecure
       traefik.http.routers.authentik-outpost-callback.tls: 'true'
       traefik.http.routers.authentik-outpost-callback.tls.certresolver: letsencrypt
@@ -95,33 +79,33 @@ services:
     command: worker
     depends_on:
       - authentik-postgresql
-      - authentik-redis
     env_file:
       - .env
     environment:
-      AUTHENTIK_REDIS__HOST: "authentik-redis"
       AUTHENTIK_POSTGRESQL__HOST: "authentik-postgresql"
       AUTHENTIK_POSTGRESQL__USER: "authentik"
       AUTHENTIK_POSTGRESQL__NAME: "authentik"
       AUTHENTIK_POSTGRESQL__PASSWORD: "${PG_PASS}"
       TZ: "Pacific/Auckland"
       AUTHENTIK_STORAGE__FILE__PATH: "/media"
-    # The worker needs docker.sock to manage the embedded outpost (matches
-    # upstream's official compose) — this grants it root-equivalent access to
-    # the Docker host, same trust level Traefik/watchtower already have via
-    # their own socket mounts in this repo.
-    user: root
+    # No docker.sock (and so no user: root): upstream mounts it only so the
+    # worker can deploy *extra* outposts as containers. The embedded outpost
+    # runs inside authentik-server and doesn't need it.
     volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock"
       - "/srv/authentik/media:/media"
       - "/srv/authentik/certs:/certs"
       - "/srv/authentik/custom-templates:/templates"
+    # Only needs Postgres (plus outbound for email), not Traefik.
     networks:
-      - proxy
+      - authentik
     labels:
       com.centurylabs.watchtower.enable: 'false'
 
 networks:
+  # Redis is gone: Authentik hasn't used it since 2025.10 (it had 0 keys and no
+  # clients here). /srv/authentik-redis is left over and can be deleted.
+  authentik:
+    name: authentik
   proxy:
     name: proxy
     enable_ipv6: true

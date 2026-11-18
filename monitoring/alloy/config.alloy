@@ -1,0 +1,73 @@
+// Ships container logs and the host's systemd journal to Loki.
+
+// --- Docker containers ---------------------------------------------------
+// Read through alloy-socket-proxy (GET-only container/events endpoints), not
+// docker.sock directly.
+discovery.docker "containers" {
+  host = "tcp://alloy-socket-proxy:2375"
+}
+
+discovery.relabel "containers" {
+  targets = []
+
+  // Only compose-managed containers: skips one-off `docker run --rm` helpers,
+  // which vanish before Alloy can inspect them and would add junk label values.
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+    regex         = ""
+    action        = "drop"
+  }
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+    target_label  = "stack"
+  }
+  rule {
+    source_labels = ["__meta_docker_container_log_stream"]
+    target_label  = "stream"
+  }
+}
+
+loki.source.docker "containers" {
+  host          = "tcp://alloy-socket-proxy:2375"
+  targets       = discovery.docker.containers.targets
+  labels        = {job = "docker", host = "kiwisvr01"}
+  relabel_rules = discovery.relabel.containers.rules
+  forward_to    = [loki.write.local.receiver]
+}
+
+// --- Host journal (restic, sanoid, gpu-procs, sshd, kernel, ...) ---------
+loki.relabel "journal" {
+  forward_to = []
+
+  rule {
+    source_labels = ["__journal__systemd_unit"]
+    target_label  = "unit"
+  }
+  rule {
+    source_labels = ["__journal_priority_keyword"]
+    target_label  = "level"
+  }
+  rule {
+    source_labels = ["__journal_syslog_identifier"]
+    target_label  = "identifier"
+  }
+}
+
+loki.source.journal "host" {
+  path          = "/var/log/journal"
+  max_age       = "12h"
+  relabel_rules = loki.relabel.journal.rules
+  labels        = {job = "journal", host = "kiwisvr01"}
+  forward_to    = [loki.write.local.receiver]
+}
+
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

@@ -62,6 +62,11 @@ Config lives in `backup/`; the restic script itself and its credentials stay in 
   `80`/`443` and issuing Let's Encrypt certs. Services opt in via `traefik.*` Docker labels.
 - Almost every stack joins the external `proxy` Docker network (created out-of-band, not by any
   compose file here — `docker network create proxy --ipv6`) so Traefik can route to them.
+  Containers Traefik never routes to stay off it: Authentik's Postgres and worker are on a private
+  `authentik` network, and the exporters on a private `monitoring` network.
+- Traefik reads container labels through `traefik-socket-proxy`, a GET-only Docker API proxy on
+  an internal network, instead of mounting `docker.sock` (a `:ro` mount still exposes the whole
+  API).
 - **cloudflared** (`cloudflared/`) runs a Cloudflare Tunnel for the handful of services exposed
   to the internet (currently `auth`, `jellyfin`, `seerr`), fronted by Cloudflare Access.
 - **pihole** (`pihole/`) is internal DNS/adblock for the LAN.
@@ -183,20 +188,22 @@ sequenceDiagram
 ```
 
 Grafana goes one step further and trusts `X-authentik-username` for its own login
-(`auth.proxy` in `monitoring/grafana/grafana.ini`), so it's single sign-on end to end.
+(`auth.proxy` in `monitoring/grafana/grafana.ini`), so it's single sign-on end to end. It only
+accepts that header from Traefik's fixed `proxy` address (`172.23.255.250`); without the
+whitelist, any container on `proxy` could send it straight to `grafana:3000`.
 
 ### Stacks
 
 | Directory | What it runs | URL |
 |---|---|---|
-| `traefik/` | Reverse proxy, TLS termination | `:80`/`:443`, dashboard on `:8082` |
+| `traefik/` | Reverse proxy, TLS termination | `:80`/`:443`, dashboard at `traefik.loganhill.nz` |
 | `cloudflared/` | Cloudflare Tunnel client | — |
-| `authentik/` | Authentik server/worker + its own Postgres/Redis | `auth.loganhill.nz` |
+| `authentik/` | Authentik server/worker + its own Postgres (private `authentik` network; only the server is on `proxy`) | `auth.loganhill.nz` |
 | `pihole/` | DNS + adblock | `pihole.loganhill.nz` |
 | `jellyfin/` | Jellyfin + Sonarr, Radarr, Lidarr, Prowlarr, qBittorrent, FlareSolverr, Seerr | `jellyfin.loganhill.nz`, `seerr.loganhill.nz` |
 | `questarr/` | Questarr (game library manager, downloads via qBittorrent) + ClamAV for pre-import scans, LAN only | `questarr.loganhill.nz` |
 | `immich/` | Immich photo management | `immich.loganhill.nz` |
-| `monitoring/` | Grafana, Prometheus, and exporters (pihole, Mikrotik, node, ZFS, iDRAC, NVIDIA GPU, SMART, cAdvisor); host-side `gpu-procs` and `host-metrics` units feed node-exporter's textfile collector | `grafana.loganhill.nz` |
+| `monitoring/` | Grafana, Prometheus, Loki + Alloy (container logs and the host journal), blackbox probes (hostnames via Traefik, app health endpoints, Pi-hole DNS, LAN devices), and exporters (pihole, Mikrotik, node, ZFS, iDRAC, NVIDIA GPU, SMART, cAdvisor); host-side `gpu-procs` and `host-metrics` units feed node-exporter's textfile collector | `grafana.loganhill.nz` |
 | `unifi-os/` | UniFi OS Server (Network app) | `unifi.loganhill.nz` |
 | `minecraft/` | Minecraft server (CurseForge modpack) + BlueMap | `mc.loganhill.nz` |
 | `watchtower/` | Watches for image updates, monitor-only, emails on findings | — |
@@ -234,7 +241,7 @@ flowchart LR
         direction TB
         d_traefik["traefik/<br/>certs · dynamic · letsencrypt"]
         d_cfd["cloudflared/<br/>&lt;tunnel-id&gt;.json"]
-        d_ak["authentik/ media · certs · custom-templates<br/>authentik-postgres/ · authentik-redis/"]
+        d_ak["authentik/ media · certs · custom-templates<br/>authentik-postgres/"]
         d_pihole["pihole/etc-pihole"]
         d_cfg["jellyfin/config · sonarr/config · radarr/config<br/>lidarr/config · qbittorrent/ · prowlarr/data · jellyseerr/"]
         subgraph d_data["data/"]

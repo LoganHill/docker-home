@@ -1,9 +1,20 @@
-address: 127.0.0.1 # Listen address
+address: 0.0.0.0   # Listen address (inside the container)
 port: 9348         # Listen port
-timeout: 10        # HTTP timeout (in seconds) for Redfish API calls
+timeout: 40        # HTTP timeout (in seconds) for each Redfish call; this iDRAC is slow
 hosts:
   10.4.20.21:
     username: <username>
     password: <password>
+# Only what the Status dashboard uses: every extra collector adds Redfish calls,
+# and with all of them on most scrapes timed out. This iDRAC doesn't report
+# per-CPU health, so cpu stays off.
 metrics:
-  all: true
+  system: true
+  sensors: true
+  power: true
+  memory: true
+  cpu: false
+  events: false
+  storage: false
+  network: false
+  extra: false

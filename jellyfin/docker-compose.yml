@@ -125,33 +125,6 @@ services:
       traefik.docker.network: proxy
       traefik.http.routers.prowlarr.middlewares: authentik@docker
 
-  deluge:
-    image: lscr.io/linuxserver/deluge:latest
-    container_name: deluge
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Pacific/Auckland
-    volumes:
-      - /srv/deluge:/config
-      - /srv/data/torrents:/data/torrents
-    # Replaced by qBittorrent; kept for rollback until the migration has soaked. Profile-gated so
-    # a plain `up -d` never starts it alongside qBittorrent on the same files. Rollback: stop
-    # qbittorrent, then `docker compose --profile deluge-rollback up -d deluge`.
-    profiles: [deluge-rollback]
-    networks:
-      - proxy
-    restart: always
-    labels:
-      traefik.enable: true
-      traefik.http.routers.deluge.rule: Host(`deluge.loganhill.nz`)
-      traefik.http.routers.deluge.entrypoints: websecure
-      traefik.http.routers.deluge.tls: true
-      traefik.http.routers.deluge.tls.certresolver: letsencrypt
-      traefik.http.services.deluge.loadbalancer.server.port: 8112
-      traefik.docker.network: proxy
-      traefik.http.routers.deluge.middlewares: authentik@docker
-
   qbittorrent:
     image: lscr.io/linuxserver/qbittorrent:latest
     container_name: qbittorrent
