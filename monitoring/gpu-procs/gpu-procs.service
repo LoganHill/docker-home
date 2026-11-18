@@ -1,0 +1,14 @@
+[Unit]
+Description=Per-container GPU usage for node-exporter (textfile collector)
+After=docker.service
+Wants=docker.service
+
+[Service]
+User=logan
+Group=docker
+ExecStart=/home/logan/docker/monitoring/gpu-procs/gpu-procs.sh /srv/monitoring/textfile
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,64 @@
+services:
+  questarr:
+    image: ghcr.io/doezer/questarr:v1.6.0
+    container_name: questarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Pacific/Auckland
+      - APP_URL=https://questarr.loganhill.nz
+      # Only Traefik sits in front, and no port is published, so one hop is the whole story.
+      - TRUST_PROXY=1
+    volumes:
+      - /srv/questarr:/app/data
+      # Same /data layout as the media stack, so qBittorrent's /data/torrents paths resolve as-is
+      # (no path mappings) and imports into /data/media/games can hardlink.
+      - /srv/data:/data
+    networks:
+      - proxy
+      - default
+    restart: always
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5000/api/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      traefik.enable: true
+      traefik.http.routers.questarr.rule: Host(`questarr.loganhill.nz`)
+      traefik.http.routers.questarr.entrypoints: websecure
+      traefik.http.routers.questarr.tls: true
+      traefik.http.routers.questarr.tls.certresolver: letsencrypt
+      traefik.http.services.questarr.loadbalancer.server.port: 5000
+      traefik.docker.network: proxy
+      # Internal only: deliberately not in cloudflared/config.yml. No authentik@docker either:
+      # Questarr has its own mandatory login and no trusted-header support, so forward-auth
+      # would just be a double login (same situation as Seerr).
+      #traefik.http.routers.questarr.middlewares: authentik@docker
+
+  # clamd for Questarr's pre-import scan (Settings → Import → Security: host `clamav`, port 3310).
+  # No UI; tune via CLAMD_CONF_<Option>, which the image's /init writes into clamd.conf.
+  # Only on this stack's default network, so nothing else on `proxy` can reach 3310.
+  clamav:
+    image: clamav/clamav:1.5_base
+    container_name: clamav
+    environment:
+      - TZ=Pacific/Auckland
+      # Defaults are 100M/100M/400M, which would send nearly every game archive to manual
+      # review. 2047M is the real per-file ceiling: ClamAV 1.5 can't scan a single file over
+      # 2 GiB whatever this says, so bigger files are still held for review in Questarr.
+      # MaxScanSize caps the total extracted from one archive and isn't bound by that limit.
+      - CLAMD_CONF_StreamMaxLength=2047M
+      - CLAMD_CONF_MaxFileSize=2047M
+      - CLAMD_CONF_MaxScanSize=4000M
+    volumes:
+      # Signature DB (~400 MB). freshclam inside the container keeps it current.
+      - /srv/clamav:/var/lib/clamav
+    restart: always
+
+networks:
+  proxy:
+    name: proxy
+    enable_ipv6: true
+    external: true

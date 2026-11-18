@@ -40,6 +40,8 @@ services:
       - "--web.enable-lifecycle"
       - "--web.enable-admin-api"
 
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - "/srv/monitoring/prometheus:/prometheus"
       - "./prometheus:/etc/prometheus"
@@ -89,17 +91,75 @@ services:
     image: prom/node-exporter:latest
     container_name: exporter_svr
     restart: always
-    networks:
-      - proxy
+    # host network so the netdev collector sees the real NICs; on a bridge
+    # network it only sees its own container eth0. Prometheus reaches it via
+    # host.docker.internal:9100.
+    network_mode: host
     command:
       - '--path.procfs=/host/proc'
       - '--path.rootfs=/rootfs'
       - '--path.sysfs=/host/sys'
-      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc|srv/\.zfs/snapshot)($$|/)'
+      - '--collector.netdev.device-exclude=^(lo|veth.*|br-.*|docker0)$$'
+      - '--collector.netclass.ignored-devices=^(lo|veth.*|br-.*|docker0)$$'
+      - '--collector.textfile.directory=/textfile'
     volumes:
       - "/proc:/host/proc:ro"
       - "/sys:/host/sys:ro"
+      - "/:/rootfs:ro,rslave"
+      # written by gpu-procs/gpu-procs.sh (per-container GPU usage)
+      - "/srv/monitoring/textfile:/textfile:ro"
+
+  exporter_gpu:
+    image: utkuozdemir/nvidia_gpu_exporter:latest
+    container_name: exporter_gpu
+    restart: always
+    networks:
+      - proxy
+    environment:
+      - NVIDIA_DRIVER_CAPABILITIES=utility
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  exporter_smart:
+    image: prometheuscommunity/smartctl-exporter:v0.14.0
+    container_name: exporter_smart
+    restart: always
+    privileged: true
+    user: root
+    networks:
+      - proxy
+    command:
+      - '--smartctl.interval=120s'
+      # the PERC also exposes each disk as bus_0_megaraid_N; keep only /dev/sdX
+      - '--smartctl.device-exclude=^bus_'
+
+  # per-container CPU/memory/network; only the cheap collectors are enabled
+  exporter_cadvisor:
+    image: ghcr.io/google/cadvisor:v0.53.0
+    container_name: exporter_cadvisor
+    restart: always
+    privileged: true
+    networks:
+      - proxy
+    devices:
+      - /dev/kmsg
+    command:
+      - '--docker_only=true'
+      - '--housekeeping_interval=15s'
+      - '--store_container_labels=false'
+      - '--enable_metrics=cpu,memory,network,oom_event'
+    volumes:
       - "/:/rootfs:ro"
+      - "/var/run:/var/run:ro"
+      - "/sys:/sys:ro"
+      - "/var/lib/docker/:/var/lib/docker:ro"
+      - "/dev/disk/:/dev/disk:ro"
 
   exporter_zfs:
     image: matusnovak/prometheus-zfs:latest
