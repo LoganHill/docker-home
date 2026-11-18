@@ -206,7 +206,6 @@ whitelist, any container on `proxy` could send it straight to `grafana:3000`.
 | `monitoring/` | Grafana, Prometheus, Loki + Alloy (container logs and the host journal), blackbox probes (hostnames via Traefik, app health endpoints, Pi-hole DNS, LAN devices), and exporters (pihole, Mikrotik, node, ZFS, iDRAC, NVIDIA GPU, SMART, cAdvisor); host-side `gpu-procs` and `host-metrics` units feed node-exporter's textfile collector | `grafana.loganhill.nz` |
 | `unifi-os/` | UniFi OS Server (Network app) | `unifi.loganhill.nz` |
 | `minecraft/` | Minecraft server (CurseForge modpack) + BlueMap | `mc.loganhill.nz` |
-| `watchtower/` | Watches for image updates, monitor-only, emails on findings | — |
 | `ntfy/` | Reserved for a future ntfy deployment; no compose file yet | — |
 
 #### Storage mappings
@@ -282,5 +281,27 @@ that carry live secrets outside of `.env` (e.g. `monitoring/idrac.yml`, `pihole/
 
 ### Updates
 
-Watchtower checks for new images across all stacks but is deliberately monitor-only — it emails instead of auto-restarting containers, since blind auto-updates risk breaking
-things like Postgres or Traefik.
+Every image is pinned to an exact version **and** digest (`traefik:v3.4.5@sha256:…`), so
+`docker compose up -d` only ever runs what's in git, and a rebuilt or re-pointed tag can't
+sneak in. [Renovate](https://docs.renovatebot.com/) (the Mend GitHub app, config in
+[`renovate.json`](renovate.json)) checks the registries every Saturday morning and opens a PR
+per update, with release notes. Merging doesn't deploy anything; on kiwisvr01:
+
+```sh
+cd ~/docker && git pull
+docker compose -f <stack>/docker-compose.yml up -d   # only the stacks the PR touched
+```
+
+- Non-major bumps are grouped into one PR per week for `monitoring/` and for the media stack
+  (`jellyfin/`); Immich server and ML always move together.
+- Majors get their own PR. Authentik's Postgres majors are disabled (they need a dump/restore),
+  and Immich's Postgres image is left alone (Immich's release notes say when to change it).
+- LinuxServer tags (`4.0.20.3014-ls5`), qBittorrent (`5.3.0_v2.1.2-ls487`), ClamAV `_base`
+  and Grafana `-security-NN` releases have custom versioning rules so Renovate can compare them.
+- PRs touching the `traefik/`, `authentik/` or `cloudflared/` stacks are labelled
+  `disruptive`: deploying them blips every hostname/login.
+- [`.github/workflows/renovate-ntfy.yml`](.github/workflows/renovate-ntfy.yml) pushes each
+  new Renovate PR to ntfy (repo secret `NTFY_URL`, the full topic URL).
+- The Dependency Dashboard issue lists everything pending, and lets you trigger a check early.
+
+Watchtower was removed in favour of this.

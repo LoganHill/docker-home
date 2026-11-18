@@ -1,6 +1,6 @@
 services:
   questarr:
-    image: ghcr.io/doezer/questarr:v1.6.0
+    image: ghcr.io/doezer/questarr:v1.6.0@sha256:495a1648f1ad8dddd4c7f96b4bf817d9d061bfd5608ef520522f0d891415e972
     container_name: questarr
     environment:
       - PUID=1000
@@ -41,7 +41,7 @@ services:
   # No UI; tune via CLAMD_CONF_<Option>, which the image's /init writes into clamd.conf.
   # Only on this stack's default network, so nothing else on `proxy` can reach 3310.
   clamav:
-    image: clamav/clamav:1.5_base
+    image: clamav/clamav:1.5.4_base@sha256:64ca916618842ba469ef38a501e6c2f42a68281c064c03749b0126c0fb085ce5
     container_name: clamav
     environment:
       - TZ=Pacific/Auckland
