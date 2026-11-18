@@ -302,6 +302,7 @@ docker compose -f <stack>/docker-compose.yml up -d   # only the stacks the PR to
   `disruptive`: deploying them blips every hostname/login.
 - [`.github/workflows/renovate-ntfy.yml`](.github/workflows/renovate-ntfy.yml) pushes each
   new Renovate PR to ntfy (repo secret `NTFY_URL`, the full topic URL).
-- The Dependency Dashboard issue lists everything pending, and lets you trigger a check early.
+- No Dependency Dashboard: it lives in an issue and issues are disabled on this repo. Enable
+  issues and remove the `dependencyDashboard` line from `renovate.json` to get one.
 
 Watchtower was removed in favour of this.
