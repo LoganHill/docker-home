@@ -5,7 +5,7 @@ datasources:
     uid: alertmanager
     type: alertmanager
     access: proxy
-    url: http://alertmanager:9093
+    url: http://alertmanager:9093/alertmanager
     jsonData:
       implementation: prometheus
       handleGrafanaManagedAlerts: false
