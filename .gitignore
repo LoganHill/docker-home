@@ -8,3 +8,4 @@ immich/.env
 authentik/.env
 watchtower/.env
 minecraft/.env
+arr-tools/.env
