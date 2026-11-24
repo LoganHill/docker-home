@@ -1,7 +1,5 @@
 services:
   # Removes fake/malware downloads from qBittorrent and the *arr queues.
-  # https://qbittorrent.loganhill.nz/cleanuparr/ (behind Authentik). It reuses
-  # qBittorrent's hostname so it needs no DNS records or outpost-callback host.
   # Keep "Disable Auth for Local Addresses" and "Trust Forwarded Headers" OFF in
   # its settings: every container on `proxy` looks local to it.
   # No media or downloads mount on purpose: it only acts through the apps' APIs.
@@ -10,7 +8,6 @@ services:
     container_name: cleanuparr
     environment:
       - PORT=11011
-      - BASE_PATH=/cleanuparr
       - PUID=1000
       - PGID=1000
       - TZ=Pacific/Auckland
@@ -22,7 +19,7 @@ services:
       - proxy
     restart: always
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:11011/cleanuparr/health"]
+      test: ["CMD", "curl", "-fsS", "http://localhost:11011/health"]
       interval: 30s
       timeout: 10s
       start_period: 30s
@@ -30,8 +27,7 @@ services:
     labels:
       traefik.enable: true
       traefik.docker.network: proxy
-      # Longer rule than qBittorrent's Host() one, so Traefik gives it priority
-      traefik.http.routers.cleanuparr.rule: Host(`qbittorrent.loganhill.nz`) && PathPrefix(`/cleanuparr`)
+      traefik.http.routers.cleanuparr.rule: Host(`cleanuparr.loganhill.nz`)
       traefik.http.routers.cleanuparr.entrypoints: websecure
       traefik.http.routers.cleanuparr.tls: true
       traefik.http.routers.cleanuparr.tls.certresolver: letsencrypt
