@@ -1,0 +1,15 @@
+[http]
+  [http.routers.idrac]
+    entrypoints = ["websecure"]
+    rule = "Host(`kiwisvr01-idrac.loganhill.nz`)"
+    service = "idrac"
+    [http.routers.idrac.tls]
+      certResolver = "letsencrypt"
+
+[http.services]
+  [http.services.idrac.loadbalancer]
+    passHostHeader = true
+    [[http.services.idrac.loadBalancer.servers]]
+      url = "https://10.4.20.21"
+      port = 443
+      scheme = "https"
