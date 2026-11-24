@@ -232,6 +232,13 @@ groups:
   # --- The monitoring stack itself ------------------------------------------
   - name: monitoring
     rules:
+      # Always firing on purpose: Alertmanager turns it into a regular ping to
+      # healthchecks.io, which notifies when the pings stop (dead-man switch).
+      - alert: Watchdog
+        expr: vector(1)
+        labels: {severity: none}
+        annotations:
+          summary: Alerting pipeline heartbeat (always firing)
       - alert: ScrapeTargetDown
         expr: up == 0
         for: 10m

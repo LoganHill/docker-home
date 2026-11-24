@@ -146,3 +146,12 @@ tests:
             exp_annotations:
               summary: Pi-hole failing pihole-local lookups
               description: Devices should be falling back to the router's DNS (10.4.20.254), which has its own blocklist and local names.
+
+  - interval: 1m
+    input_series: []
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: Watchdog
+        exp_alerts:
+          - exp_labels: {severity: none}
+            exp_annotations: {summary: Alerting pipeline heartbeat (always firing)}
