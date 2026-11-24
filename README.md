@@ -124,6 +124,11 @@ Pi-hole does split-horizon DNS: every `*.loganhill.nz` service name is a local C
 `kiwisvr01`, so LAN clients go straight to Traefik and never leave the network. Certs are real
 Let's Encrypt certs issued via Cloudflare DNS-01, so the same hostnames work inside and out.
 
+The router (RouterOS) is every device's second DNS server, handed out by DHCP and IPv6 router
+advertisements. It doesn't depend on Pi-hole: ISP upstreams, the same StevenBlack list
+(`/ip dns adlist`) and its own static records. **A new hostname needs adding in both places:**
+Pi-hole, and `/ip dns static add name=<host>.loganhill.nz type=CNAME cname=kiwisvr01.int.loganhill.nz`.
+
 ```mermaid
 flowchart TB
     client(["LAN client"])
@@ -203,7 +208,7 @@ whitelist, any container on `proxy` could send it straight to `grafana:3000`.
 | `jellyfin/` | Jellyfin + Sonarr, Radarr, Lidarr, Prowlarr, qBittorrent, FlareSolverr, Seerr | `jellyfin.loganhill.nz`, `seerr.loganhill.nz` |
 | `questarr/` | Questarr (game library manager, downloads via qBittorrent) + ClamAV for pre-import scans, LAN only | `questarr.loganhill.nz` |
 | `immich/` | Immich photo management | `immich.loganhill.nz` |
-| `monitoring/` | Grafana, Prometheus + Alertmanager (alerts to ntfy, see [Alerts](#alerts)), Loki + Alloy (container logs and the host journal), blackbox probes (hostnames via Traefik, app health endpoints, Pi-hole DNS, LAN devices), and exporters (pihole, Mikrotik, node, ZFS, iDRAC, NVIDIA GPU, SMART, cAdvisor); host-side `gpu-procs` and `host-metrics` units feed node-exporter's textfile collector | `grafana.loganhill.nz` |
+| `monitoring/` | Grafana, Prometheus + Alertmanager (alerts to ntfy, see [Alerts](#alerts)), Loki + Alloy (container logs and the host journal), blackbox probes (hostnames via Traefik, app health endpoints, Pi-hole and router DNS, LAN devices), and exporters (pihole, Mikrotik, node, ZFS, iDRAC, NVIDIA GPU, SMART, cAdvisor); host-side `gpu-procs` and `host-metrics` units feed node-exporter's textfile collector | `grafana.loganhill.nz` |
 | `unifi-os/` | UniFi OS Server (Network app) | `unifi.loganhill.nz` |
 | `minecraft/` | Minecraft server (CurseForge modpack) + BlueMap | `mc.loganhill.nz` |
 | `ntfy/` | Reserved for a future ntfy deployment; no compose file yet | — |
@@ -291,7 +296,7 @@ instances (e.g. three hostnames) share a message.
 - **Covered:** backups (failed, or no success in 26h), sanoid snapshots, pool state, capacity
   and data errors, scrubs, SMART, disk/GPU/sensor temperatures, iDRAC components (not the
   rollup: PS1 is unplugged by design), memory, OOM kills, NTP, every app's health endpoint,
-  hostnames via Traefik, Pi-hole DNS, LAN devices, certificate expiry, scrape targets, and the
+  hostnames via Traefik, Pi-hole and fallback (router) DNS, LAN devices, certificate expiry, scrape targets, and the
   host-side metric scripts.
 - **Inhibitions:** a DNS or Authentik outage suppresses the per-hostname alerts it causes, and
   so does an app's own `AppDown` for its hostname.
