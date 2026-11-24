@@ -9,7 +9,9 @@ rule_files:
 
 alerting:
   alertmanagers:
-    - static_configs:
+    # Alertmanager serves everything under /alertmanager (its --web.external-url)
+    - path_prefix: /alertmanager
+      static_configs:
         - targets: ['alertmanager:9093']
 
 scrape_configs:
@@ -74,6 +76,7 @@ scrape_configs:
         replacement: exporter_idrac:9348
 
   - job_name: alertmanager
+    metrics_path: /alertmanager/metrics
     static_configs:
       - targets: ['alertmanager:9093']
 

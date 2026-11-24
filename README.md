@@ -298,8 +298,9 @@ instances (e.g. three hostnames) share a message.
 - **Topic URLs** aren't in git: `/srv/monitoring/alertmanager/secrets/ntfy-{critical,warning}.url`,
   one full URL each (`https://ntfy.sh/<topic>?template=alertmanager`, plus `&priority=high`
   for critical).
-- **Silences and the live alert list:** Grafana > Alerting (Alertmanager datasource).
-  Alertmanager has no Traefik route.
+- **Silences and the live alert list:** Alertmanager's own UI at
+  `https://prometheus.loganhill.nz/alertmanager/` (behind Authentik). Grafana's Alerting
+  pages also see it through the Alertmanager datasource.
 - **Not covered:** the server itself dying (nothing left to send the alert). A dead-man check
   (Alertmanager pinging healthchecks.io) is on the to-do list.
 - Rule changes: `curl -X POST http://prometheus:9090/-/reload` from the monitoring network

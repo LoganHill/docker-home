@@ -60,9 +60,11 @@ services:
       - "traefik.docker.network=proxy"
       - "traefik.http.routers.prometheus.middlewares=authentik@docker"
 
-  # Routes alerts from Prometheus to ntfy (alertmanager/alertmanager.yml). No
-  # Traefik route: view and silence alerts in Grafana (Alerting > Alert rules /
-  # Silences, "Alertmanager" datasource).
+  # Routes alerts from Prometheus to ntfy (alertmanager/alertmanager.yml). Its
+  # own UI (active alerts, silences) is at https://prometheus.loganhill.nz/alertmanager/,
+  # behind Authentik; Prometheus' hostname is reused so no new DNS record or
+  # outpost-callback host is needed. Everything (API, /metrics) sits under that
+  # /alertmanager prefix, including for Prometheus and Grafana.
   alertmanager:
     image: prom/alertmanager:v0.35.0@sha256:e638797febd034838eca8b98cdbd46f951e9bf7f178777aa8669167406a9946c
     container_name: alertmanager
@@ -71,13 +73,25 @@ services:
     command:
       - "--config.file=/etc/alertmanager/alertmanager.yml"
       - "--storage.path=/alertmanager"
+      - "--web.external-url=https://prometheus.loganhill.nz/alertmanager/"
     volumes:
       - "./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro"
       # ntfy topic URLs (ntfy-critical.url, ntfy-warning.url); not in git
       - "/srv/monitoring/alertmanager/secrets:/etc/alertmanager/secrets:ro"
       - "/srv/monitoring/alertmanager/data:/alertmanager"
     networks:
+      - proxy
       - monitoring
+    labels:
+      - "traefik.enable=true"
+      # Longer rule than Prometheus' Host() one, so Traefik gives it priority
+      - "traefik.http.routers.alertmanager.rule=Host(`prometheus.loganhill.nz`) && PathPrefix(`/alertmanager`)"
+      - "traefik.http.routers.alertmanager.entrypoints=websecure"
+      - "traefik.http.routers.alertmanager.tls=true"
+      - "traefik.http.routers.alertmanager.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.alertmanager.middlewares=authentik@docker"
+      - "traefik.http.services.alertmanager.loadbalancer.server.port=9093"
+      - "traefik.docker.network=proxy"
 
   exporter_pihole:
     image: ekofr/pihole-exporter:v1.4.0@sha256:bd849cd5e0f7f89bf38943d7988c5facfd603d9813c4c089fcff8ed121f718bb
@@ -268,7 +282,7 @@ services:
       - "./idrac.yml:/etc/prometheus/idrac.yml"
 
 networks:
-  # Exporters live here; only Prometheus, Grafana (Traefik routes to them) and
+  # Exporters live here; only Prometheus, Grafana, Alertmanager (Traefik routes to them) and
   # exporter_pihole (Pi-hole is on proxy) are also on proxy.
   monitoring:
     name: monitoring
