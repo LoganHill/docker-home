@@ -334,6 +334,10 @@ docker compose -f <stack>/docker-compose.yml up -d   # only the stacks the PR to
 
 - Non-major bumps are grouped into one PR per week for `monitoring/` and for the media stack
   (`jellyfin/`); Immich server and ML always move together.
+- Releases wait 3 days before getting a PR, so bad ones get caught upstream first. Docker Hub
+  only: ghcr.io and lscr.io (Authentik, Immich, the *arrs…) publish no release dates, so those
+  come through straight away (`timestamp-optional`; the default would hold them forever).
+  A Docker Hub release with no date waits.
 - Majors get their own PR. Authentik's Postgres majors are disabled (they need a dump/restore),
   and Immich's Postgres image is left alone (Immich's release notes say when to change it).
 - LinuxServer tags (`4.0.20.3014-ls5`), qBittorrent (`5.3.0_v2.1.2-ls487`), ClamAV `_base`

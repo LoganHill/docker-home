@@ -8,6 +8,7 @@
   ],
   "schedule": ["* * * * 0,6"],
   "dependencyDashboard": {"enabled": false},
+  "minimumReleaseAge": "3 days",
   "prHourlyLimit": 0,
   "prConcurrentLimit": 10,
   "labels": ["renovate"],
@@ -15,6 +16,12 @@
     "**Deploy after merging:** on kiwisvr01, `git pull` in `~/docker`, then `docker compose up -d` in each changed stack directory (see the file list above)."
   ],
   "packageRules": [
+    {
+      "description": "ghcr.io and lscr.io expose no release dates, so minimumReleaseAge would hold these forever; let them through. Docker Hub keeps the default (no date = wait).",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["ghcr.io/**", "lscr.io/**"],
+      "minimumReleaseAgeBehaviour": "timestamp-optional"
+    },
     {
       "description": "LinuxServer *arr tags: 4.0.20.3014-ls5 (app version + LinuxServer build number)",
       "matchDatasources": ["docker"],
