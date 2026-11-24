@@ -183,12 +183,20 @@ groups:
           description: The app's own health check is fine, so look at Traefik or the route.
 
       - alert: DnsDown
-        expr: probe_success{job="blackbox_dns"} == 0
+        expr: probe_success{job="blackbox_dns", service=~"pihole-.*"} == 0
         for: 2m
         labels: {severity: critical}
         annotations:
           summary: "Pi-hole failing {{ $labels.service }} lookups"
-          description: Pi-hole is the LAN's only DNS server, so name resolution is down for every device.
+          description: Devices should be falling back to the router's DNS (10.4.20.254), which has its own blocklist and local names.
+
+      - alert: FallbackDnsDown
+        expr: probe_success{job="blackbox_dns", service=~"router-.*"} == 0
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "Router DNS failing the {{ $labels.service }} check"
+          description: "The router (10.4.20.254) is the fallback if Pi-hole fails. Check `/ip dns print` and `/ip dns adlist print`; local names are static records there."
 
       - alert: RouterUnreachable
         expr: probe_success{job="blackbox_icmp", service="router"} == 0

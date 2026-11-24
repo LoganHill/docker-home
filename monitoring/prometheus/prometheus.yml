@@ -177,6 +177,13 @@ scrape_configs:
         labels: {module: dns_local, service: pihole-local}
       - targets: ['10.4.20.20:53']
         labels: {module: dns_upstream, service: pihole-upstream}
+      # The router is every device's second DNS server (own adlist + static records).
+      - targets: ['10.4.20.254:53']
+        labels: {module: dns_local, service: router-local}
+      - targets: ['10.4.20.254:53']
+        labels: {module: dns_upstream, service: router-upstream}
+      - targets: ['10.4.20.254:53']
+        labels: {module: dns_blocked, service: router-blocking}
     relabel_configs:
       - source_labels: [module]
         target_label: __param_module

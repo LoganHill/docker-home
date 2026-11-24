@@ -23,7 +23,8 @@ modules:
       tls_config:
         insecure_skip_verify: true   # unifi-os-server's self-signed backend cert
 
-  # Pi-hole must answer a local record (split-horizon) and an upstream one.
+  # Pi-hole and the router (the fallback DNS) must each answer a local record
+  # (split-horizon) and an upstream one.
   dns_local:
     prober: dns
     timeout: 5s
@@ -44,6 +45,18 @@ modules:
       valid_rcodes: [NOERROR]
       validate_answer_rrs:
         fail_if_none_matches_regexp: [".*\\sIN\\s+A\\s+.*"]
+
+  # An ad domain must come back as 0.0.0.0 (the router's adlist is loaded).
+  dns_blocked:
+    prober: dns
+    timeout: 5s
+    dns:
+      query_name: doubleclick.net
+      query_type: A
+      preferred_ip_protocol: ip4
+      valid_rcodes: [NOERROR]
+      validate_answer_rrs:
+        fail_if_none_matches_regexp: [".*\\sIN\\s+A\\s+0\\.0\\.0\\.0$"]
 
   # LAN devices. Docker allows unprivileged ICMP sockets in containers.
   icmp:

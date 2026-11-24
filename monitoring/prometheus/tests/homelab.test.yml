@@ -115,3 +115,34 @@ tests:
             exp_annotations:
               summary: https://auth.loganhill.nz/ cert expires in 19d 22h 0m 0s
               description: Let's Encrypt renews at 30 days left, so renewals are failing. Check Traefik's logs.
+
+  # Router (fallback) DNS is its own warning; it must not raise DnsDown.
+  - interval: 1m
+    input_series:
+      - series: 'probe_success{job="blackbox_dns", service="pihole-local", instance="10.4.20.20:53"}'
+        values: '1x10'
+      - series: 'probe_success{job="blackbox_dns", service="router-blocking", instance="10.4.20.254:53"}'
+        values: '0x10'
+    alert_rule_test:
+      - {eval_time: 4m, alertname: FallbackDnsDown, exp_alerts: []}
+      - {eval_time: 6m, alertname: DnsDown, exp_alerts: []}
+      - eval_time: 6m
+        alertname: FallbackDnsDown
+        exp_alerts:
+          - exp_labels: {severity: warning, job: blackbox_dns, service: router-blocking, instance: "10.4.20.254:53"}
+            exp_annotations:
+              summary: Router DNS failing the router-blocking check
+              description: "The router (10.4.20.254) is the fallback if Pi-hole fails. Check `/ip dns print` and `/ip dns adlist print`; local names are static records there."
+
+  - interval: 1m
+    input_series:
+      - series: 'probe_success{job="blackbox_dns", service="pihole-local", instance="10.4.20.20:53"}'
+        values: '0x10'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: DnsDown
+        exp_alerts:
+          - exp_labels: {severity: critical, job: blackbox_dns, service: pihole-local, instance: "10.4.20.20:53"}
+            exp_annotations:
+              summary: Pi-hole failing pihole-local lookups
+              description: Devices should be falling back to the router's DNS (10.4.20.254), which has its own blocklist and local names.

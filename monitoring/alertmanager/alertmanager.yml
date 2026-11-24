@@ -52,9 +52,9 @@ inhibit_rules:
   - source_matchers: ['alertname="AppDown"']
     target_matchers: ['alertname="HostnameDown"']
     equal: [service]
-  # Router down: the LAN devices behind it look down too.
+  # Router down: the LAN devices behind it, and its DNS, look down too.
   - source_matchers: ['alertname="RouterUnreachable"']
-    target_matchers: ['alertname="LanDeviceUnreachable"']
+    target_matchers: ['alertname=~"LanDeviceUnreachable|FallbackDnsDown"']
   # Same problem at both thresholds: only the critical one.
   - source_matchers: ['alertname="CertExpiryCritical"']
     target_matchers: ['alertname="CertExpiringSoon"']
