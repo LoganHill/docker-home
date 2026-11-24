@@ -43,7 +43,7 @@ services:
 
     volumes:
       - /srv/traefik/certs:/certs:ro
-      - /srv/traefik/dynamic:/dynamic:ro
+      - ./dynamic:/dynamic:ro
       - /srv/traefik/letsencrypt:/letsencrypt
 
     command:

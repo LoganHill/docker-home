@@ -238,7 +238,7 @@ flowchart LR
 
     subgraph srv["/srv · rootpool/srv"]
         direction TB
-        d_traefik["traefik/<br/>certs · dynamic · letsencrypt"]
+        d_traefik["traefik/<br/>certs · letsencrypt"]
         d_cfd["cloudflared/<br/>&lt;tunnel-id&gt;.json"]
         d_ak["authentik/ media · certs · custom-templates<br/>authentik-postgres/"]
         d_pihole["pihole/etc-pihole"]
