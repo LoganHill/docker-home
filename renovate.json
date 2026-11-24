@@ -6,7 +6,7 @@
     "docker:pinDigests",
     ":timezone(Pacific/Auckland)"
   ],
-  "schedule": ["* 0-6 * * 6"],
+  "schedule": ["* * * * 0,6"],
   "dependencyDashboard": {"enabled": false},
   "prHourlyLimit": 0,
   "prConcurrentLimit": 10,
@@ -25,6 +25,17 @@
         "lscr.io/linuxserver/prowlarr"
       ],
       "versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)\\.(?<build>\\d+)-ls(?<revision>\\d+)$"
+    },
+    {
+      "description": "Sonarr: LinuxServer restarted its build counter at ls1, so the older 4.0.20.3014-ls325..329 builds would look newer than ls6",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["lscr.io/linuxserver/sonarr"],
+      "allowedVersions": "!/^4\\.0\\.20\\.3014-ls3\\d\\d$/"
+    },
+    {
+      "description": "TEMPORARY: proves PRs + ntfy without waiting for the weekend (the server is stopped, so there's nothing to deploy). Remove after the first PR.",
+      "matchFileNames": ["minecraft/docker-compose.yml"],
+      "schedule": ["at any time"]
     },
     {
       "description": "LinuxServer Jellyfin tags: 12.4ubu2604-ls59 (the ubuNNNN base stays fixed)",

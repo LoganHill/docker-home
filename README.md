@@ -318,8 +318,9 @@ that carry live secrets outside of `.env` (e.g. `monitoring/idrac.yml`, `pihole/
 Every image is pinned to an exact version **and** digest (`traefik:v3.4.5@sha256:…`), so
 `docker compose up -d` only ever runs what's in git, and a rebuilt or re-pointed tag can't
 sneak in. [Renovate](https://docs.renovatebot.com/) (the Mend GitHub app, config in
-[`renovate.json`](renovate.json)) checks the registries every Saturday morning and opens a PR
-per update, with release notes. Merging doesn't deploy anything; on kiwisvr01:
+[`renovate.json`](renovate.json)) checks the registries and opens PRs at weekends (any time Saturday or Sunday: Mend only runs the
+job about once a day until a Renovate PR has been merged, at a time we don't choose), one per
+update, with release notes. Merging doesn't deploy anything; on kiwisvr01:
 
 ```sh
 cd ~/docker && git pull
