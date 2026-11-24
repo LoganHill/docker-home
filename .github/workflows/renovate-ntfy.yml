@@ -1,6 +1,6 @@
 # Push a notification to ntfy whenever Renovate opens an update PR.
 # Needs the repo secret NTFY_URL (full topic URL, e.g. https://ntfy.sh/<topic>);
-# without it the job logs a notice and does nothing.
+# without it the job fails, so a missing or empty secret is visible.
 name: ntfy on Renovate PR
 
 on:
@@ -21,7 +21,7 @@ jobs:
           TITLE: ${{ github.event.pull_request.title }}
           PR_URL: ${{ github.event.pull_request.html_url }}
         run: |
-          if [ -z "$NTFY_URL" ]; then echo "::notice::NTFY_URL secret not set; skipping"; exit 0; fi
+          if [ -z "$NTFY_URL" ]; then echo "::error::NTFY_URL secret is missing or empty"; exit 1; fi
           # Edge components (labels aren't on the PR yet at "opened", so match the title)
           tags=package
           if printf '%s' "$TITLE" | grep -Eqi 'traefik|authentik|cloudflared|postgres|socket-proxy'; then tags=package,warning; fi

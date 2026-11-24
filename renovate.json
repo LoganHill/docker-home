@@ -33,11 +33,6 @@
       "allowedVersions": "!/^4\\.0\\.20\\.3014-ls3\\d\\d$/"
     },
     {
-      "description": "TEMPORARY: proves PRs + ntfy without waiting for the weekend (the server is stopped, so there's nothing to deploy). Remove after the first PR.",
-      "matchFileNames": ["minecraft/docker-compose.yml"],
-      "schedule": ["at any time"]
-    },
-    {
       "description": "LinuxServer Jellyfin tags: 12.4ubu2604-ls59 (the ubuNNNN base stays fixed)",
       "matchDatasources": ["docker"],
       "matchPackageNames": ["lscr.io/linuxserver/jellyfin"],
