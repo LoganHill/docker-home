@@ -5,6 +5,7 @@
 # Alertmanager template:
 #   ntfy-critical.url  https://ntfy.sh/<topic>?template=alertmanager&priority=high
 #   ntfy-warning.url   https://ntfy.sh/<topic>?template=alertmanager
+#   healthchecks.url   https://hc-ping.com/<uuid>  (dead-man switch)
 
 route:
   receiver: ntfy-warning
@@ -15,6 +16,12 @@ route:
   group_interval: 5m
   repeat_interval: 24h
   routes:
+    # Dead-man switch: one ping every ~5 min, day and night, to healthchecks.io only.
+    - matchers: ['alertname="Watchdog"']
+      receiver: healthchecks
+      group_wait: 0s
+      group_interval: 1m
+      repeat_interval: 5m
     - matchers: ['severity="critical"']
       receiver: ntfy-critical
       repeat_interval: 4h
@@ -32,6 +39,11 @@ receivers:
     webhook_configs:
       - url_file: /etc/alertmanager/secrets/ntfy-warning.url
         send_resolved: true
+  # A resolved Watchdog must not count as a ping.
+  - name: healthchecks
+    webhook_configs:
+      - url_file: /etc/alertmanager/secrets/healthchecks.url
+        send_resolved: false
 
 time_intervals:
   - name: overnight

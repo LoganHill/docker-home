@@ -306,8 +306,9 @@ instances (e.g. three hostnames) share a message.
 - **Silences and the live alert list:** Alertmanager's own UI at
   `https://prometheus.loganhill.nz/alertmanager/` (behind Authentik). Grafana's Alerting
   pages also see it through the Alertmanager datasource.
-- **Not covered:** the server itself dying (nothing left to send the alert). A dead-man check
-  (Alertmanager pinging healthchecks.io) is on the to-do list.
+- **Dead-man switch:** `Watchdog` always fires, so Alertmanager pings healthchecks.io about every
+  5 minutes (URL in `/srv/monitoring/alertmanager/secrets/healthchecks.url`). When the pings stop
+  (server, power, internet, Prometheus or Alertmanager down) healthchecks.io notifies by itself.
 - Rule changes: `curl -X POST http://prometheus:9090/-/reload` from the monitoring network
   (or restart Prometheus). Test with
   `docker run --rm -v ./monitoring/prometheus:/p -w /p/tests --entrypoint promtool prom/prometheus test rules homelab.test.yml`.
