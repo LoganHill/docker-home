@@ -1,0 +1,48 @@
+# Blocks junk releases on the existing HD-1080p profiles. Deliberately NOT here:
+#  - TRaSH's "LQ" lists: they reject PSA, MeGusta, RARBG, YTS, Tigole...
+#  - "x265 (HD)" and quality_definition: they favour much bigger files
+#  - quality_profiles: qualities, cutoffs and "upgrades allowed" (off) stay as set
+#    in the apps, so a sync can't start re-downloading the library.
+# HD-1080p's minimum custom format score is 0, so -10000 means "never grab".
+sonarr:
+  sonarr:
+    base_url: http://sonarr:8989
+    api_key: !env_var SONARR_API_KEY
+    delete_old_custom_formats: false
+    custom_formats:
+      - trash_ids:
+          - 85c61753df5da1fb2aab6f2a47426b09 # BR-DISK
+          - fbcb31d8dabd2a319072b84fc0b7249c # Extras
+          - 23297a736ca77c0fc8e70f8edd7ee56c # Upscaled
+        assign_scores_to:
+          - name: HD-1080p
+            score: -10000
+      - trash_ids:
+          - ec8fa7296b64e8cd390a1600981f3923 # Repack/Proper
+          - eb3d5cc0a2be0db205fb823640db6a3c # Repack2
+          - 44e7c4de10ae50265753082e5dc76047 # Repack3
+        assign_scores_to:
+          - name: HD-1080p
+
+radarr:
+  radarr:
+    base_url: http://radarr:7878
+    api_key: !env_var RADARR_API_KEY
+    delete_old_custom_formats: false
+    custom_formats:
+      - trash_ids:
+          - ed38b889b31be83fda192888e2286d83 # BR-DISK
+          - b8cd450cbfa689c0259a01d9e29ba3d6 # 3D
+          - 0a3f082873eb454bde444150b70253cc # Extras
+          - bfd8eb01832d646a0a89c4deb46f8564 # Upscaled
+          - 712d74cd88bceb883ee32f773656b1f5 # Sing-Along Versions
+          - d6e9318c875905d6cfb5bee961afcea9 # Language: Not Original (dubs without the original audio)
+        assign_scores_to:
+          - name: HD-1080p
+            score: -10000
+      - trash_ids:
+          - e7718d7a3ce595f289bfee26adc178f5 # Repack/Proper
+          - ae43b294509409a6a13919dedd4764c4 # Repack2
+          - 5caaaa1c08c1742aa4342d8c4cc463f2 # Repack3
+        assign_scores_to:
+          - name: HD-1080p

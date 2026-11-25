@@ -106,6 +106,7 @@ scrape_configs:
           - 'https://prowlarr.loganhill.nz/'
           - 'https://qbittorrent.loganhill.nz/'
           - 'https://questarr.loganhill.nz/'
+          - 'https://cleanuparr.loganhill.nz/'
           - 'https://immich.loganhill.nz/'
           - 'https://grafana.loganhill.nz/'
           - 'https://prometheus.loganhill.nz/'
