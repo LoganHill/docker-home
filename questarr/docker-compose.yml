@@ -41,7 +41,7 @@ services:
   # No UI; tune via CLAMD_CONF_<Option>, which the image's /init writes into clamd.conf.
   # Only on this stack's default network, so nothing else on `proxy` can reach 3310.
   clamav:
-    image: clamav/clamav:1.5.4_base@sha256:64ca916618842ba469ef38a501e6c2f42a68281c064c03749b0126c0fb085ce5
+    image: clamav/clamav:1.5.4_base@sha256:187c76a552c21b8924e08370655c4007eb642baaace9748c5eb46a32672d8d8e
     container_name: clamav
     environment:
       - TZ=Pacific/Auckland
